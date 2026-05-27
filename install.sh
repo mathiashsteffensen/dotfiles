@@ -4,7 +4,7 @@
 DOTFILES_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # List of files to symlink in the home directory (no Zsh, only Bash!)
-files=(".bash_profile" ".bashrc" ".gitconfig" ".gitignore")
+files=(".bash_profile" ".bashrc" ".bash_functions" ".gitconfig" ".gitignore")
 
 echo "========================================"
 echo "Installing Bash-only dotfiles..."
