@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Get the directory of this script
+DOTFILES_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# List of files to symlink in the home directory (no Zsh, only Bash!)
+files=(".bash_profile" ".bashrc" ".gitconfig" ".gitignore")
+
+echo "========================================"
+echo "Installing Bash-only dotfiles..."
+echo "========================================"
+
+for file in "${files[@]}"; do
+    target="$HOME/$file"
+    source="$DOTFILES_DIR/$file"
+    
+    # If the file already exists in home, back it up first
+    if [ -f "$target" ] && [ ! -L "$target" ]; then
+        echo "Backing up existing $file to ${target}.bak"
+        mv "$target" "${target}.bak"
+    fi
+    
+    # Create the symbolic link
+    echo "Linking $source -> $target"
+    ln -sf "$source" "$target"
+done
+
+echo "========================================"
+echo "Done! Your Bash environment is linked."
+echo "Open a new terminal or run: source ~/.bash_profile"
+echo "========================================"

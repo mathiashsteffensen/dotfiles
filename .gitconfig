@@ -1,0 +1,15 @@
+[user]
+	name = Your Name
+	email = your.email@example.com
+
+[init]
+	defaultBranch = main
+
+[core]
+	editor = nano
+	excludesfile = ~/.gitignore_global
+
+# Include a local config that isn't tracked in git.
+# This is perfect for machine-specific keys, personal vs work email, etc.
+[include]
+	path = ~/.gitconfig.local
