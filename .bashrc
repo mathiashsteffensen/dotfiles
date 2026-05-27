@@ -1,7 +1,3 @@
-# ==============================================================================
-#  Julia's Custom Bash Configuration
-# ==============================================================================
-
 # Ensure colors are enabled
 export CLICOLOR=1
 export LSCOLORS=ExFxBxDxCxegedabagacad
@@ -11,14 +7,19 @@ if [ -f ~/.bash_functions ]; then
     . ~/.bash_functions
 fi
 
-# ------------------------------------------------------------------------------
-#  Custom Dynamic Git Prompt
-# ------------------------------------------------------------------------------
-# Puts the git branch name into the prompt in dark gray, following a blue directory path.
-export PS1="\[\e[1;34m\]\w\[\e[m\]\$(git branch &>/dev/null; if [ \$? -eq 0 ]; then echo ' \[\e[1;30m\]\$(git branch | grep ^*|sed s/\\\*\\\ //)'; fi) \[\e[m\]\[\e[0;00m\]\$ "
+parse_git_branch() {
+    local branch
+    branch=$(git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD 2>/dev/null)
+    if [ -n "$branch" ]; then
+        echo " ($branch)"
+    fi
+}
+
+# Single quotes are critical here so parse_git_branch runs every time the prompt redraws
+export PS1='\[\e[1;34m\]\w\[\e[1;30m\]$(parse_git_branch)\[\e[0m\] \$ '
 
 # ------------------------------------------------------------------------------
-#  Your Authentic Git Aliases
+#  Git Aliases
 # ------------------------------------------------------------------------------
 alias gst="git status"
 alias gl="git pull --rebase"

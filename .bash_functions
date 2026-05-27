@@ -1,7 +1,3 @@
-# ==============================================================================
-#  Julia's Filtered Bash Functions (Personal & Portable)
-# ==============================================================================
-
 # Colors
 RED='\033[0;31m'
 NO_COLOR='\033[0m'
@@ -72,11 +68,6 @@ echo-exec() {
 	/bin/bash -c "$@"
 }
 
-# Open JetBrains RubyMine IDE
-rubymine() {
-	open -na "RubyMine.app" --args "$@"
-}
-
 # Start a disposable linux Docker container with pwd volume mount
 linux() {
 	docker_args=${4:-""}
@@ -129,24 +120,7 @@ dns-cache-clean() {
 	sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder
 }
 
-# Start standard ngrok proxy
-ngrok_web() {
-	ngrok http 3000
-}
-
 # Watch a directory and run a command on changes
 watch-dir() {
 	fswatch -xrt . | xargs -n1 -I{} "$@"
-}
-
-# Quick Docker Compose helper
-dc() {
-	case "$1" in
-    rails)
-		shift
-		docker compose run --remove-orphans core-rails "$@"
-        ;;
-    *)
-		docker compose "$@"
-	esac
 }
