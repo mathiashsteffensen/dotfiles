@@ -60,3 +60,6 @@ alias cp='cp -i'
 # ------------------------------------------------------------------------------
 export PATH="$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH"
 export EDITOR="nano"
+
+# Start SSH Agent
+eval "$(ssh-agent -s)" &> /dev/null
