@@ -21,6 +21,7 @@ export PS1='\[\e[1;34m\]\w\[\e[1;30m\]$(parse_git_branch)\[\e[0m\] \$ '
 # ------------------------------------------------------------------------------
 #  Git Aliases
 # ------------------------------------------------------------------------------
+alias lg="lazygit"
 alias gst="git status"
 alias gl="git pull --rebase"
 alias gp="git push"
@@ -58,7 +59,7 @@ alias cp='cp -i'
 # ------------------------------------------------------------------------------
 #  Environment Path Setup
 # ------------------------------------------------------------------------------
-export PATH="$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH"
+export PATH="$(go env GOPATH)/bin:$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH"
 export EDITOR="nano"
 
 # Start SSH Agent
