@@ -34,7 +34,22 @@ alias gcm="git commit -m"
 alias gb="git branch --color"
 alias gbd="git branch -D"
 alias gba="git branch -a"
-alias gco="git checkout"
+gco() {
+    if [ "$#" -eq 1 ] && [[ "$1" != -* ]]; then
+        local target="$1"
+        if git show-ref --verify --quiet "refs/heads/$target" ||
+           [ -n "$(git for-each-ref --format='%(refname)' "refs/remotes/*/$target" 2>/dev/null)" ] ||
+           git rev-parse --verify --quiet "$target^{commit}" >/dev/null ||
+           [ -e "$target" ] ||
+           git ls-files --error-unmatch -- "$target" >/dev/null 2>&1; then
+            git checkout "$target"
+        else
+            git checkout -b "$target"
+        fi
+    else
+        git checkout "$@"
+    fi
+}
 alias gr="git rebase"
 alias gra="gr --abort"
 alias grc="gr --continue"
@@ -63,4 +78,4 @@ export PATH="$(go env GOPATH)/bin:$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PAT
 export EDITOR="nano"
 
 # Start SSH Agent
-eval "$(ssh-agent -s)" &> /dev/null
+eval "$(ssh-agent -s)" &> /dev/null || fail
