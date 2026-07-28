@@ -1,0 +1,6 @@
+# Machine-specific Git settings.
+# Copy to .gitconfig.local, then customize. The .local file is ignored by Git.
+
+# [user]
+#     name = Your Name
+#     email = you@example.com

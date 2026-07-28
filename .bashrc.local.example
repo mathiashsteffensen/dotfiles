@@ -1,0 +1,4 @@
+# Machine-specific interactive-shell settings.
+# Copy to .bashrc.local, then customize. The .local file is ignored by Git.
+
+# export PATH="/opt/homebrew/bin:$PATH"

@@ -79,3 +79,8 @@ export EDITOR="nano"
 
 # Start SSH Agent
 eval "$(ssh-agent -s)" &> /dev/null || fail
+
+# Load machine-specific shell settings. This file is intentionally not tracked.
+if [ -f ~/.bashrc.local ]; then
+    . ~/.bashrc.local
+fi

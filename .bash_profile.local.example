@@ -1,0 +1,6 @@
+# Machine-specific login-shell settings.
+# Copy to .bash_profile.local, then customize. The .local file is ignored by Git.
+
+# if [ -f "$HOME/google-cloud-sdk/path.bash.inc" ]; then
+#     . "$HOME/google-cloud-sdk/path.bash.inc"
+# fi
