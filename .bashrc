@@ -1,6 +1,7 @@
 # Ensure colors are enabled
 export CLICOLOR=1
 export LSCOLORS=ExFxBxDxCxegedabagacad
+export OPENCODE_ENABLE_EXA=1
 
 # Load custom helper functions if they exist
 if [ -f ~/.bash_functions ]; then

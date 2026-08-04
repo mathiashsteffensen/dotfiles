@@ -33,6 +33,7 @@ for file in "${local_files[@]}"; do
     source="$DOTFILES_DIR/$file"
 
     if [ ! -f "$source" ]; then
+        echo "Local override $file not found (this is normal)"
         continue
     fi
 
@@ -48,4 +49,17 @@ done
 echo "========================================"
 echo "Done! Your Bash environment is linked."
 echo "Open a new terminal or run: source ~/.bash_profile"
+echo ""
+echo "Local configuration files:"
+echo "- .bash_profile.local (for login shell settings)"
+echo "- .bashrc.local (for interactive shell settings)"
+echo "- .gitconfig.local (for Git user settings)"
+echo ""
+echo "To manage local configurations:"
+echo "- Run './manage-local-configs.sh' for help and guidance"
+echo ""
+echo "To set up local configurations:"
+echo "1. Copy any .example file to remove the .example extension"
+echo "2. Customize the copied file with your machine-specific settings"
+echo "3. Run this script again to link the new files"
 echo "========================================"
