@@ -124,3 +124,14 @@ dns-cache-clean() {
 watch-dir() {
 	fswatch -xrt . | xargs -n1 -I{} "$@"
 }
+
+watch-http-status() {
+    uri="$1"
+
+    while true;
+    do
+        status=$(curl -sS -L -o /dev/null -w '%{http_code}' "$uri")
+        printf '%s %s\n' "$uri" "$status"
+        sleep 2
+    done
+}
