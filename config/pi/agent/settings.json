@@ -1,0 +1,23 @@
+{
+  "theme": "dark",
+  "defaultProvider": "openai-codex",
+  "defaultModel": "gpt-5.6-luna",
+  "packages": [
+    "npm:pi-web-access",
+    "npm:pi-subagents"
+  ],
+  "defaultThinkingLevel": "high",
+  "tuiMode": "fullscreen",
+  "enableInstallTelemetry": false,
+  "quietStartup": true,
+  "defaultProjectTrust": "ask",
+  "modelThinkingLevels": {
+    "openai-codex/gpt-5.6-luna": "high",
+    "openai-codex/gpt-5.6-sol": "medium"
+  },
+  "lastChangelogVersion": "0.84.3",
+  "editorPaddingX": 0,
+  "terminal": {
+    "showTerminalProgress": true
+  }
+}

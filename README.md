@@ -1,6 +1,6 @@
 # Dotfiles
 
-My personal dotfiles configuration for Bash environment.
+My personal dotfiles configuration for Bash and Pi.
 
 ## Overview
 
@@ -20,6 +20,12 @@ This repository contains my Bash configuration files and scripts to manage them 
 - `.bashrc.local` - Machine-specific interactive shell settings
 - `.gitconfig.local` - Machine-specific Git user settings
 
+### Pi Configuration
+- `config/pi/agent/settings.json` - Global Pi settings
+- `config/pi/agent/models.json` - Custom Pi model providers
+- `config/pi/agent/APPEND_SYSTEM.md` - Global appended system instructions
+- `config/pi/agent/extensions/auto-approve/` - Custom auto-approve extension source
+
 ## Installation
 
 1. Clone this repository to your home directory:
@@ -38,6 +44,8 @@ This repository contains my Bash configuration files and scripts to manage them 
    ```bash
    source ~/.bash_profile
    ```
+
+The installer also links the Pi configuration into `~/.pi/agent` (or the directory set by `PI_CODING_AGENT_DIR`). Existing regular files are backed up as `.bak` files.
 
 ## Local Configuration Management
 
