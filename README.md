@@ -1,6 +1,6 @@
 # Dotfiles
 
-My personal dotfiles configuration for Bash and Pi.
+My personal dotfiles configuration for Bash, Pi, Ghostty, and Zed.
 
 ## Overview
 
@@ -20,12 +20,17 @@ This repository contains my Bash configuration files and scripts to manage them 
 - `.bashrc.local` - Machine-specific interactive shell settings
 - `.gitconfig.local` - Machine-specific Git user settings
 
+### Application Configuration
+- `config/ghostty/config` - Ghostty terminal settings
+- `config/zed/settings.json` - Zed editor settings and Pi ACP integration
+
 ### Pi Configuration
 - `config/pi/agent/settings.json` - Global Pi settings
 - `config/pi/agent/models.json` - Custom Pi model providers
 - `config/pi/agent/APPEND_SYSTEM.md` - Global appended system instructions
 - `config/pi/agent/extensions/auto-approve/` - Custom auto-approve extension source
 - `config/pi/agent/extensions/codex-usage/` - Codex subscription weekly usage status extension
+- `config/pi/agent/extensions/pi-openai-fast-mode/` - Priority-service configuration for supported OpenAI models
 
 ## Installation
 
@@ -48,15 +53,19 @@ This repository contains my Bash configuration files and scripts to manage them 
 
 The installer also installs the tooling I regularly use from the terminal during my development workflow:
 * Pi agent harness
+* Ghostty terminal
 * Go compiler
 * lazygit
 * lazysql
 * Zed text editor
+* Node.js runtime
+* Pi ACP adapter
 
-The installer also links the Pi configuration into `~/.pi/agent` (or the directory set by `PI_CODING_AGENT_DIR`). Existing regular files are backed up as `.bak` files.
+The installer links Ghostty and Zed settings under `${XDG_CONFIG_HOME:-$HOME/.config}`. It also links Pi configuration into `~/.pi/agent` (or the directory set by `PI_CODING_AGENT_DIR`). Existing files and directories are backed up as `.bak` before being replaced with symbolic links.
 This configuration includes custom extensions to:
-* Run a auto-approve LLM model on all agent commands to determine wether the risk factor requires a human review (like codex and claude-code has an auto-approve mode)
-* Display weekly codex subscription usage in the TUI and keep it up-to-date
+* Run an auto-approve LLM model on all agent commands to determine whether the risk factor requires human review
+* Display weekly Codex subscription usage in the TUI and keep it up-to-date
+* Enable priority service tiers for supported OpenAI models
 
 ## Local Configuration Management
 
@@ -81,7 +90,7 @@ To set up local configurations:
 The configuration follows these conventions:
 - Standard configs are tracked in Git
 - Local configs are intentionally ignored by Git
-- The install script handles backup and linking of existing files
+- The install script handles backup and linking of existing files and directories
 - Machine-specific overrides are loaded automatically
 
 ## Contributing

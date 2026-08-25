@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -e
+shopt -s nullglob dotglob
 
 function title() {
     echo ""
@@ -15,10 +16,25 @@ function section_end() {
     echo ""
 }
 
+function link_config() {
+    local source="$1"
+    local target="$2"
+
+    if [ -L "$target" ]; then
+        rm "$target"
+    elif [ -e "$target" ]; then
+        echo "Backing up existing $target to ${target}.bak"
+        mv "$target" "${target}.bak"
+    fi
+
+    echo "Linking $source -> $target"
+    ln -s "$source" "$target"
+}
+
 function install_command_if_not_present() {
-    cmd_name="$1"
-    display_name="$2"
-    install_script="$3"
+    local cmd_name="$1"
+    local display_name="$2"
+    local install_script="$3"
 
     if ! command -v "$cmd_name" >/dev/null 2>&1; then
         title "Installing $display_name..."
@@ -29,124 +45,62 @@ function install_command_if_not_present() {
 title "Installing development tooling..."
 install_command_if_not_present "pi" "Pi" "curl -fsSL https://pi.dev/install.sh | sh"
 install_command_if_not_present "brew" "Homebrew" "curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | sh"
+install_command_if_not_present "ghostty" "Ghostty" "brew install --cask ghostty"
 install_command_if_not_present "go" "Go" "brew install go"
 install_command_if_not_present "lazygit" "lazygit" "brew install lazygit"
 install_command_if_not_present "lazysql" "lazysql" "brew install lazysql"
 install_command_if_not_present "zed" "Zed" "brew install --cask zed"
+install_command_if_not_present "node" "Node.js" 'curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.7/install.sh | bash
+. "$HOME/.nvm/nvm.sh"
+nvm install 24'
+install_command_if_not_present "pi-acp" "Pi ACP Adapter" "npm install -g pi-acp"
 section_end
 
-title "Installing Bash dotfiles and Pi configuration..."
-# Get the directory of this script
 DOTFILES_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-# List of files to symlink in the home directory (no Zsh, only Bash!)
-files=(".bash_profile" ".bashrc" ".bash_functions" ".gitconfig" ".gitignore")
-local_files=(".bash_profile.local" ".bashrc.local" ".gitconfig.local")
-pi_config_dir="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
-pi_files=("APPEND_SYSTEM.md" "models.json" "settings.json")
-pi_extension_source="$DOTFILES_DIR/config/pi/agent/extensions/auto-approve"
-pi_usage_extension_source="$DOTFILES_DIR/config/pi/agent/extensions/codex-usage"
+title "Installing Bash dotfiles..."
+for source in "$DOTFILES_DIR"/*; do
+    [[ -f "$source" ]] || continue
+    [[ "$source" == *.example ]] && continue
+    [[ "$source" == *.md ]] && continue
+    [[ "$source" == *.sh ]] && continue
 
-for file in "${files[@]}"; do
-    target="$HOME/$file"
-    source="$DOTFILES_DIR/$file"
-
-    # If the file already exists in home, back it up first
-    if [ -f "$target" ] && [ ! -L "$target" ]; then
-        echo "Backing up existing $file to ${target}.bak"
-        mv "$target" "${target}.bak"
-    fi
-
-    # Create the symbolic link
-    echo "Linking $source -> $target"
-    ln -sf "$source" "$target"
+    relative="${source#"$DOTFILES_DIR"/}"
+    link_config "$source" "$HOME/$relative"
 done
-
-# Link machine-specific overrides only when they exist in this checkout.
-# They are ignored by Git, so local changes never appear in git diff.
-for file in "${local_files[@]}"; do
-    target="$HOME/$file"
-    source="$DOTFILES_DIR/$file"
-
-    if [ ! -f "$source" ]; then
-        echo "Local override $file not found (this is normal)"
-        continue
-    fi
-
-    if [ -f "$target" ] && [ ! -L "$target" ]; then
-        echo "Backing up existing $file to ${target}.bak"
-        mv "$target" "${target}.bak"
-    fi
-
-    echo "Linking local override $source -> $target"
-    ln -sf "$source" "$target"
-done
-
-# Link the shared Pi configuration into Pi's global configuration directory.
-mkdir -p "$pi_config_dir"
-for file in "${pi_files[@]}"; do
-    target="$pi_config_dir/$file"
-    source="$DOTFILES_DIR/config/pi/agent/$file"
-
-    if [ -f "$target" ] && [ ! -L "$target" ]; then
-        echo "Backing up existing Pi config $file to ${target}.bak"
-        mv "$target" "${target}.bak"
-    elif [ -e "$target" ] && [ ! -L "$target" ]; then
-        echo "Error: Pi config target is not a regular file: $target" >&2
-        exit 1
-    fi
-
-    echo "Linking $source -> $target"
-    if ! ln -sf "$source" "$target"; then
-        echo "Error: failed to link Pi config $file" >&2
-        exit 1
-    fi
-done
-
-# Link the custom auto-approve extension into Pi's extensions directory.
-pi_extension_target="$pi_config_dir/extensions/auto-approve"
-mkdir -p "$(dirname "$pi_extension_target")"
-if [ -L "$pi_extension_target" ]; then
-    rm "$pi_extension_target"
-elif [ -e "$pi_extension_target" ]; then
-    echo "Backing up existing Pi extension to ${pi_extension_target}.bak"
-    mv "$pi_extension_target" "${pi_extension_target}.bak"
-fi
-
-echo "Linking $pi_extension_source -> $pi_extension_target"
-ln -s "$pi_extension_source" "$pi_extension_target"
-
-# Link the Codex subscription usage extension.
-pi_usage_extension_target="$pi_config_dir/extensions/codex-usage"
-mkdir -p "$(dirname "$pi_usage_extension_target")"
-if [ -L "$pi_usage_extension_target" ]; then
-    rm "$pi_usage_extension_target"
-elif [ -e "$pi_usage_extension_target" ]; then
-    echo "Backing up existing Pi extension to ${pi_usage_extension_target}.bak"
-    mv "$pi_usage_extension_target" "${pi_usage_extension_target}.bak"
-fi
-
-echo "Linking $pi_usage_extension_source -> $pi_usage_extension_target"
-ln -s "$pi_usage_extension_source" "$pi_usage_extension_target"
 section_end
 
-title "Done! Your Bash environment and Pi configuration are linked."
+title "Installing application configuration..."
+xdg_config_dir="${XDG_CONFIG_HOME:-$HOME/.config}"
+mkdir -p "$xdg_config_dir/ghostty" "$xdg_config_dir/zed"
+link_config "$DOTFILES_DIR/config/ghostty/config" "$xdg_config_dir/ghostty/config"
+link_config "$DOTFILES_DIR/config/zed/settings.json" "$xdg_config_dir/zed/settings.json"
+
+# Link the shared Pi configuration into Pi's global configuration directory.
+pi_config_dir="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
+pi_dotfiles_dir="$DOTFILES_DIR/config/pi/agent"
+mkdir -p "$pi_config_dir"
+for source in "$pi_dotfiles_dir"/*; do
+    [[ -f "$source" ]] || continue
+
+    relative="${source#"$pi_dotfiles_dir"/}"
+    link_config "$source" "$pi_config_dir/$relative"
+done
+
+pi_extensions_dir="$pi_dotfiles_dir/extensions"
+pi_extension_target_dir="$pi_config_dir/extensions"
+mkdir -p "$pi_extension_target_dir"
+
+for source in "$pi_extensions_dir"/*; do
+    [[ -d "$source" ]] || continue
+
+    relative="${source#"$pi_extensions_dir"/}"
+    link_config "$source" "$pi_extension_target_dir/$relative"
+done
+section_end
+
+title "Done! Your configuration is linked."
 echo "Open a new terminal or run: source ~/.bash_profile"
-echo ""
-echo "Local configuration files:"
-echo "- .bash_profile.local (for login shell settings)"
-echo "- .bashrc.local (for interactive shell settings)"
-echo "- .gitconfig.local (for Git user settings)"
-echo ""
-echo "Pi configuration:"
-echo "- $pi_config_dir/settings.json"
-echo "- $pi_config_dir/models.json"
-echo "- $pi_config_dir/APPEND_SYSTEM.md"
-echo "- $pi_extension_target"
-echo "- $pi_usage_extension_target"
-echo ""
-echo "To manage local configurations:"
-echo "- Run './manage-local-configs.sh' for help and guidance"
 echo ""
 echo "To set up local configurations:"
 echo "1. Copy any .example file to remove the .example extension"
