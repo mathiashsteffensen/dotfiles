@@ -50,10 +50,6 @@ install_command_if_not_present "go" "Go" "brew install go"
 install_command_if_not_present "lazygit" "lazygit" "brew install lazygit"
 install_command_if_not_present "lazysql" "lazysql" "brew install lazysql"
 install_command_if_not_present "zed" "Zed" "brew install --cask zed"
-install_command_if_not_present "node" "Node.js" 'curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.7/install.sh | bash
-. "$HOME/.nvm/nvm.sh"
-nvm install 24'
-install_command_if_not_present "pi-acp" "Pi ACP Adapter" "npm install -g pi-acp"
 section_end
 
 DOTFILES_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
