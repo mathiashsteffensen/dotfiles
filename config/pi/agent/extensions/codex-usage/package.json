@@ -1,0 +1,9 @@
+{
+  "name": "codex-usage",
+  "version": "0.1.0",
+  "main": "index.ts",
+  "type": "module",
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "^0.84.3"
+  }
+}

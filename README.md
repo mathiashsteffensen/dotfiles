@@ -25,6 +25,7 @@ This repository contains my Bash configuration files and scripts to manage them 
 - `config/pi/agent/models.json` - Custom Pi model providers
 - `config/pi/agent/APPEND_SYSTEM.md` - Global appended system instructions
 - `config/pi/agent/extensions/auto-approve/` - Custom auto-approve extension source
+- `config/pi/agent/extensions/codex-usage/` - Codex subscription weekly usage status extension
 
 ## Installation
 

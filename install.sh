@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # Get the directory of this script
 DOTFILES_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -9,6 +10,7 @@ local_files=(".bash_profile.local" ".bashrc.local" ".gitconfig.local")
 pi_config_dir="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
 pi_files=("APPEND_SYSTEM.md" "models.json" "settings.json")
 pi_extension_source="$DOTFILES_DIR/config/pi/agent/extensions/auto-approve"
+pi_usage_extension_source="$DOTFILES_DIR/config/pi/agent/extensions/codex-usage"
 
 echo "========================================"
 echo "Installing Bash dotfiles and Pi configuration..."
@@ -83,6 +85,19 @@ fi
 echo "Linking $pi_extension_source -> $pi_extension_target"
 ln -s "$pi_extension_source" "$pi_extension_target"
 
+# Link the Codex subscription usage extension.
+pi_usage_extension_target="$pi_config_dir/extensions/codex-usage"
+mkdir -p "$(dirname "$pi_usage_extension_target")"
+if [ -L "$pi_usage_extension_target" ]; then
+    rm "$pi_usage_extension_target"
+elif [ -e "$pi_usage_extension_target" ]; then
+    echo "Backing up existing Pi extension to ${pi_usage_extension_target}.bak"
+    mv "$pi_usage_extension_target" "${pi_usage_extension_target}.bak"
+fi
+
+echo "Linking $pi_usage_extension_source -> $pi_usage_extension_target"
+ln -s "$pi_usage_extension_source" "$pi_usage_extension_target"
+
 echo "========================================"
 echo "Done! Your Bash environment and Pi configuration are linked."
 echo "Open a new terminal or run: source ~/.bash_profile"
@@ -97,6 +112,7 @@ echo "- $pi_config_dir/settings.json"
 echo "- $pi_config_dir/models.json"
 echo "- $pi_config_dir/APPEND_SYSTEM.md"
 echo "- $pi_extension_target"
+echo "- $pi_usage_extension_target"
 echo ""
 echo "To manage local configurations:"
 echo "- Run './manage-local-configs.sh' for help and guidance"

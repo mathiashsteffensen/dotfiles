@@ -2,6 +2,8 @@ ALWAYS prefer `rg` over `grep`.
 
 If you are not sure of something, use web search to look it up. Always provide the user with accurate information and sources.
 
+If you see changes in a git repository that you don't know where came from, assume that they are from the user and treat them as such. Do not revert them or modify them unless expilictly needed to accomplish your stated task.
+
 ## Delegation
 
 Use `launch_subagents` when two or three independent tasks would benefit from parallel work, such as investigating existing patterns, writing tests in a disjoint scope, or reviewing code. Give each subagent a complete assignment with its allowed edit scope and expected report. Avoid overlapping writes. The tool waits for every result; synthesize the findings and perform final integration and verification yourself.
