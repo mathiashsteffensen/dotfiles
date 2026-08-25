@@ -46,7 +46,17 @@ This repository contains my Bash configuration files and scripts to manage them 
    source ~/.bash_profile
    ```
 
+The installer also installs the tooling I regularly use from the terminal during my development workflow:
+* Pi agent harness
+* Go compiler
+* lazygit
+* lazysql
+* Zed text editor
+
 The installer also links the Pi configuration into `~/.pi/agent` (or the directory set by `PI_CODING_AGENT_DIR`). Existing regular files are backed up as `.bak` files.
+This configuration includes custom extensions to:
+* Run a auto-approve LLM model on all agent commands to determine wether the risk factor requires a human review (like codex and claude-code has an auto-approve mode)
+* Display weekly codex subscription usage in the TUI and keep it up-to-date
 
 ## Local Configuration Management
 

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
 # Get the directory of this script
@@ -12,13 +12,26 @@ pi_files=("APPEND_SYSTEM.md" "models.json" "settings.json")
 pi_extension_source="$DOTFILES_DIR/config/pi/agent/extensions/auto-approve"
 pi_usage_extension_source="$DOTFILES_DIR/config/pi/agent/extensions/codex-usage"
 
-if ! command -v pi >/dev/null 2>&1; then
-    echo "========================================"
-    echo "Installing Pi..."
-    echo "========================================"
+function install_command_if_not_present() {
+    cmd_name="$1"
+    display_name="$2"
+    install_script="$3"
 
-    curl -fsSL https://pi.dev/install.sh | sh
-fi
+    if ! command -v "$cmd_name" >/dev/null 2>&1; then
+        echo "========================================"
+        echo "Installing $display_name..."
+        echo "========================================"
+
+        bash -c "$install_script"
+    fi
+}
+
+install_command_if_not_present "pi" "Pi" "curl -fsSL https://pi.dev/install.sh | sh"
+install_command_if_not_present "brew" "Homebrew" "curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | sh"
+install_command_if_not_present "go" "Go" "brew install go"
+install_command_if_not_present "lazygit" "lazygit" "brew install lazygit"
+install_command_if_not_present "lazysql" "lazysql" "brew install lazysql"
+install_command_if_not_present "zed" "Zed" "brew install --cask zed"
 
 echo "========================================"
 echo "Installing Bash dotfiles and Pi configuration..."
