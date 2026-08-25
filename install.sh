@@ -12,6 +12,14 @@ pi_files=("APPEND_SYSTEM.md" "models.json" "settings.json")
 pi_extension_source="$DOTFILES_DIR/config/pi/agent/extensions/auto-approve"
 pi_usage_extension_source="$DOTFILES_DIR/config/pi/agent/extensions/codex-usage"
 
+if ! command -v pi >/dev/null 2>&1; then
+    echo "========================================"
+    echo "Installing Pi..."
+    echo "========================================"
+
+    curl -fsSL https://pi.dev/install.sh | sh
+fi
+
 echo "========================================"
 echo "Installing Bash dotfiles and Pi configuration..."
 echo "========================================"
@@ -19,13 +27,13 @@ echo "========================================"
 for file in "${files[@]}"; do
     target="$HOME/$file"
     source="$DOTFILES_DIR/$file"
-    
+
     # If the file already exists in home, back it up first
     if [ -f "$target" ] && [ ! -L "$target" ]; then
         echo "Backing up existing $file to ${target}.bak"
         mv "$target" "${target}.bak"
     fi
-    
+
     # Create the symbolic link
     echo "Linking $source -> $target"
     ln -sf "$source" "$target"

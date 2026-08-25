@@ -4,7 +4,8 @@
   "defaultModel": "gpt-5.6-luna",
   "packages": [
     "npm:pi-web-access",
-    "npm:pi-subagents"
+    "npm:pi-subagents",
+    "npm:pi-openai-fast-mode"
   ],
   "defaultThinkingLevel": "high",
   "tuiMode": "fullscreen",
