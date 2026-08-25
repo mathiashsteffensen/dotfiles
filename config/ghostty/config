@@ -1,2 +1,7 @@
-# Run the existing Bash environment in every Ghostty window.
 command = /bin/bash
+
+keybind = cmd+arrow_up=new_split:up
+keybind = cmd+arrow_down=new_split:down
+keybind = cmd+arrow_right=new_split:right
+keybind = cmd+arrow_left=new_split:left
+keybind = cmd+e=equalize_splits
