@@ -25,7 +25,7 @@ const getAccountId = (accessToken: string): string | undefined => {
 	}
 };
 
-export const getWeeklyUsagePercent = (payload: unknown): number | undefined => {
+const getWeeklyWindow = (payload: unknown): JsonRecord | undefined => {
 	const root = asRecord(payload);
 	const rateLimit = asRecord(root?.rate_limit ?? root?.rateLimit);
 	if (!rateLimit) return undefined;
@@ -35,7 +35,7 @@ export const getWeeklyUsagePercent = (payload: unknown): number | undefined => {
 		asRecord(rateLimit.secondary_window ?? rateLimit.secondaryWindow),
 	].filter((window): window is JsonRecord => window !== undefined);
 
-	const weeklyWindow = windows.find((window) => {
+	return windows.find((window) => {
 		const rawDuration = window.limit_window_seconds;
 		if (typeof rawDuration !== "number" && typeof rawDuration !== "string") return false;
 		if (typeof rawDuration === "string" && rawDuration.trim() === "") return false;
@@ -45,6 +45,10 @@ export const getWeeklyUsagePercent = (payload: unknown): number | undefined => {
 			duration >= WEEK_SECONDS - 24 * 60 * 60 &&
 			duration <= WEEK_SECONDS + 24 * 60 * 60;
 	});
+};
+
+export const getWeeklyUsagePercent = (payload: unknown): number | undefined => {
+	const weeklyWindow = getWeeklyWindow(payload);
 	if (!weeklyWindow) return undefined;
 
 	const rawPercent = weeklyWindow.used_percent;
@@ -53,6 +57,25 @@ export const getWeeklyUsagePercent = (payload: unknown): number | undefined => {
 
 	const percent = Number(rawPercent);
 	return Number.isFinite(percent) ? Math.max(0, Math.min(100, percent)) : undefined;
+};
+
+export const getWeeklyUsageResetAt = (payload: unknown): number | undefined => {
+	const weeklyWindow = getWeeklyWindow(payload);
+	if (!weeklyWindow) return undefined;
+
+	const rawResetAt = weeklyWindow.reset_at ?? weeklyWindow.resetAt;
+	if (typeof rawResetAt !== "number" && typeof rawResetAt !== "string") return undefined;
+	if (typeof rawResetAt === "string" && rawResetAt.trim() === "") return undefined;
+
+	const resetAt = Number(rawResetAt);
+	return Number.isFinite(resetAt) && resetAt > 0 ? resetAt : undefined;
+};
+
+export const formatResetDate = (resetAt: number): string => {
+	const date = new Date(resetAt * 1000);
+	return Number.isNaN(date.getTime())
+		? "unknown"
+		: new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
 };
 
 const getUsage = async (
@@ -124,10 +147,16 @@ export default function (pi: ExtensionAPI) {
 			const percent = getWeeklyUsagePercent(payload);
 			if (percent === undefined) throw new Error("Weekly usage is unavailable");
 
+			const resetAt = getWeeklyUsageResetAt(payload);
+			const resetDate = resetAt === undefined ? "unknown" : formatResetDate(resetAt);
 			const color = percent >= 90 ? "error" : percent >= 75 ? "warning" : "success";
-			setStatus(ctx, `Codex weekly: ${percent % 1 === 0 ? percent : percent.toFixed(1)}% used`, color);
+			setStatus(
+				ctx,
+				`Codex Weekly Usage: ${percent % 1 === 0 ? percent : percent.toFixed(1)}% used - resets ${resetDate}`,
+				color,
+			);
 		} catch {
-			if (isActive()) setStatus(ctx, "Codex weekly: unavailable");
+			if (isActive()) setStatus(ctx, "Codex Weekly Usage: unavailable");
 		} finally {
 			if (activeRefreshController === controller) activeRefreshController = undefined;
 		}
@@ -139,7 +168,7 @@ export default function (pi: ExtensionAPI) {
 		activeRefreshController?.abort();
 		activeRefreshController = undefined;
 		if (refreshTimer) clearInterval(refreshTimer);
-		setStatus(ctx, "Codex weekly: loading...");
+		setStatus(ctx, "Codex Weekly Usage: loading...");
 		void refresh(ctx);
 		refreshTimer = setInterval(() => void refresh(ctx), REFRESH_INTERVAL_MS);
 	});
