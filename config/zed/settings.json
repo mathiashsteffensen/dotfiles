@@ -1,6 +1,23 @@
 {
   "cli_default_open_behavior": "new_window",
   "icon_theme": "Zed (Default)",
+  "auto_install_extensions": {
+    "html": true,
+    "ruby": true,
+    "terraform": true
+  },
+  "languages": {
+    "Ruby": {
+      "language_servers": ["ruby-lsp"]
+    }
+  },
+  "lsp": {
+    "ruby-lsp": {
+      "settings": {
+        "use_bundler": false
+      }
+    }
+  },
   "telemetry": {
     "diagnostics": false,
     "metrics": false
@@ -16,7 +33,7 @@
   "buffer_font_size": 11.0,
   "theme": {
     "mode": "dark",
-    "light": "One Light",
+    "light": "Ayu Mirage",
     "dark": "Ayu Dark",
   }
 }

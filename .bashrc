@@ -75,8 +75,16 @@ alias cp='cp -i'
 # ------------------------------------------------------------------------------
 #  Environment Path Setup
 # ------------------------------------------------------------------------------
-export PATH="$(go env GOPATH)/bin:$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH"
-export EDITOR="nano"
+if command -v rbenv >/dev/null 2>&1; then
+    eval "$(rbenv init - --no-rehash bash)"
+fi
+go_bin_dir="$(go env GOBIN)"
+if [ -z "$go_bin_dir" ]; then
+    go_bin_dir="$(go env GOPATH)/bin"
+fi
+export PATH="$go_bin_dir:$(go env GOPATH)/bin:$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH"
+export EDITOR="zed --wait"
+export VISUAL="$EDITOR"
 
 # Start SSH Agent
 eval "$(ssh-agent -s)" &> /dev/null || fail

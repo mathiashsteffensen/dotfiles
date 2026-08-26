@@ -22,7 +22,7 @@ This repository contains my Bash configuration files and scripts to manage them 
 
 ### Application Configuration
 - `config/ghostty/config` - Ghostty terminal settings
-- `config/zed/settings.json` - Zed editor settings and Pi ACP integration
+- `config/zed/settings.json` - Zed editor settings
 
 ### Pi Configuration
 - `config/pi/agent/settings.json` - Global Pi settings
@@ -56,14 +56,15 @@ This repository contains my Bash configuration files and scripts to manage them 
 The installer also installs the tooling I regularly use from the terminal during my development workflow:
 * Pi agent harness
 * Ghostty terminal
-* Go compiler
+* Go compiler and `gopls`
+* `rbenv`, `ruby-build`, and the latest stable Ruby
+* Ruby LSP via RubyGems
 * lazygit
 * lazysql
 * Zed text editor
 * Node.js runtime
-* Pi ACP adapter
 
-The installer links Ghostty and Zed settings under `${XDG_CONFIG_HOME:-$HOME/.config}`. It also links Pi configuration into `~/.pi/agent` (or the directory set by `PI_CODING_AGENT_DIR`). Existing files and directories are backed up as `.bak` before being replaced with symbolic links.
+The installer links Ghostty and Zed settings under `${XDG_CONFIG_HOME:-$HOME/.config}`. It installs `rbenv`, `ruby-build`, and the latest stable Ruby known to `ruby-build`, then selects it as rbenv’s global default. Zed is configured to automatically install its Ruby and Terraform extensions; TypeScript and Go support are built in. The installer also installs `gopls`, `ruby-lsp`, and Zed’s Terraform extension-managed `terraform-ls`. It also links Pi configuration into `~/.pi/agent` (or the directory set by `PI_CODING_AGENT_DIR`). Existing files and directories are backed up as `.bak` before being replaced with symbolic links.
 This configuration includes custom extensions to:
 * Run an auto-approve LLM model on all agent commands to determine whether the risk factor requires human review
 * Display weekly Codex subscription usage in the TUI and keep it up-to-date

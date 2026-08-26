@@ -80,11 +80,88 @@ function install_command_if_not_present() {
     fi
 }
 
+function initialize_homebrew() {
+    local brew_prefix
+
+    if ! command -v brew >/dev/null 2>&1; then
+        for brew_prefix in /opt/homebrew /usr/local; do
+            if [[ -x "$brew_prefix/bin/brew" ]]; then
+                export PATH="$brew_prefix/bin:$PATH"
+                break
+            fi
+        done
+    fi
+
+    if command -v brew >/dev/null 2>&1; then
+        eval "$(brew shellenv)"
+    fi
+}
+
+function install_go_tool_if_not_present() {
+    local cmd_name="$1"
+    local module="$2"
+    local go_bin_dir
+
+    go_bin_dir="$(go env GOBIN)"
+    if [[ -z "$go_bin_dir" ]]; then
+        go_bin_dir="$(go env GOPATH)/bin"
+    fi
+
+    if [[ ! -x "$go_bin_dir/$cmd_name" ]]; then
+        title "Installing $cmd_name..."
+        go install "$module"
+    fi
+}
+
+function install_ruby_gem_if_not_present() {
+    local gem_name="$1"
+    local installed_gems
+
+    installed_gems="$(gem list --local --exact "$gem_name" 2>/dev/null)"
+    if [[ "$installed_gems" != "$gem_name ("* ]]; then
+        title "Installing $gem_name..."
+        gem install "$gem_name" --no-document
+    fi
+}
+
+function install_latest_ruby_if_not_present() {
+    local latest_ruby
+    local rbenv_root
+
+    latest_ruby="$(rbenv install -l | awk '$0 ~ /^[0-9]+\.[0-9]+\.[0-9]+$/ { print }' | sort -t. -k1,1n -k2,2n -k3,3n | tail -n 1)"
+    if [[ -z "$latest_ruby" ]]; then
+        echo "Could not determine the latest Ruby version from ruby-build."
+        return 1
+    fi
+
+    rbenv_root="$(rbenv root)"
+    if [[ ! -d "$rbenv_root/versions/$latest_ruby" ]]; then
+        title "Installing Ruby $latest_ruby..."
+        rbenv install "$latest_ruby"
+    fi
+
+    rbenv global "$latest_ruby"
+}
+
 title "Installing development tooling..."
 install_command_if_not_present "pi" "Pi" "curl -fsSL https://pi.dev/install.sh | sh"
+initialize_homebrew
 install_command_if_not_present "brew" "Homebrew" "curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | sh"
+initialize_homebrew
 install_command_if_not_present "ghostty" "Ghostty" "brew install --cask ghostty"
 install_command_if_not_present "go" "Go" "brew install go"
+install_go_tool_if_not_present "gopls" "golang.org/x/tools/gopls@latest"
+install_command_if_not_present "rbenv" "rbenv" "brew install rbenv"
+install_command_if_not_present "ruby-build" "ruby-build" "brew install ruby-build"
+eval "$(rbenv init - --no-rehash bash)"
+install_latest_ruby_if_not_present
+if command -v gem >/dev/null 2>&1 && ruby -rrubygems -e 'abort if Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.0")'; then
+    install_ruby_gem_if_not_present "ruby-lsp"
+elif command -v gem >/dev/null 2>&1; then
+    echo "Skipping ruby-lsp: Ruby 3.0 or newer is required."
+else
+    echo "Skipping ruby-lsp: RubyGems is not installed."
+fi
 install_command_if_not_present "lazygit" "lazygit" "brew install lazygit"
 install_command_if_not_present "lazysql" "lazysql" "brew install lazysql"
 install_command_if_not_present "zed" "Zed" "brew install --cask zed"
