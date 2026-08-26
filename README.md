@@ -30,6 +30,8 @@ This repository contains my Bash configuration files and scripts to manage them 
 - `config/pi/agent/APPEND_SYSTEM.md` - Global appended system instructions
 - `config/pi/agent/extensions/auto-approve/` - Custom auto-approve extension source
 - `config/pi/agent/extensions/codex-usage/` - Codex subscription weekly usage status extension
+- `config/pi/agent/extensions/notify.ts` - Terminal notification when an agent settles
+- `config/pi/agent/extensions/plan-mode/` - Read-only planning with Bash and write tools disabled, plus tracked execution
 - `config/pi/agent/extensions/pi-openai-fast-mode/` - Priority-service configuration for supported OpenAI models
 
 ## Installation
@@ -65,6 +67,8 @@ The installer links Ghostty and Zed settings under `${XDG_CONFIG_HOME:-$HOME/.co
 This configuration includes custom extensions to:
 * Run an auto-approve LLM model on all agent commands to determine whether the risk factor requires human review
 * Display weekly Codex subscription usage in the TUI and keep it up-to-date
+* Send a terminal notification when an agent is ready for input
+* Provide read-only plan mode with Bash and write tools disabled, plus tracked execution progress
 * Enable priority service tiers for supported OpenAI models
 
 ## Local Configuration Management

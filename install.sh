@@ -31,6 +31,44 @@ function link_config() {
     ln -s "$source" "$target"
 }
 
+function next_available_backup_path() {
+    local requested_path="$1"
+    local candidate="$requested_path"
+    local suffix=1
+
+    while [[ -e "$candidate" || -L "$candidate" ]]; do
+        candidate="${requested_path}.${suffix}"
+        suffix=$((suffix + 1))
+    done
+
+    printf '%s\n' "$candidate"
+}
+
+function backup_extension_entry() {
+    local target="$1"
+    local backup_dir="$2"
+    local backup_path
+
+    backup_path="$(next_available_backup_path "$backup_dir/$(basename "$target").bak")"
+    echo "Backing up existing $target to $backup_path"
+    mv "$target" "$backup_path"
+}
+
+function link_extension() {
+    local source="$1"
+    local target="$2"
+    local backup_dir="$3"
+
+    if [[ -L "$target" && "$(readlink "$target")" == "$source" ]]; then
+        rm "$target"
+    elif [[ -L "$target" || -e "$target" ]]; then
+        backup_extension_entry "$target" "$backup_dir"
+    fi
+
+    echo "Linking $source -> $target"
+    ln -s "$source" "$target"
+}
+
 function install_command_if_not_present() {
     local cmd_name="$1"
     local display_name="$2"
@@ -85,13 +123,14 @@ done
 
 pi_extensions_dir="$pi_dotfiles_dir/extensions"
 pi_extension_target_dir="$pi_config_dir/extensions"
-mkdir -p "$pi_extension_target_dir"
+pi_extension_backup_dir="$pi_config_dir/backups/extensions"
+mkdir -p "$pi_extension_target_dir" "$pi_extension_backup_dir"
 
 for source in "$pi_extensions_dir"/*; do
-    [[ -d "$source" ]] || continue
+    [[ -f "$source" || -d "$source" ]] || continue
 
     relative="${source#"$pi_extensions_dir"/}"
-    link_config "$source" "$pi_extension_target_dir/$relative"
+    link_extension "$source" "$pi_extension_target_dir/$relative" "$pi_extension_backup_dir"
 done
 section_end
 
