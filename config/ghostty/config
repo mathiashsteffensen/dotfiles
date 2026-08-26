@@ -1,5 +1,7 @@
 command = /bin/bash
 
+desktop-notifications = true
+
 keybind = cmd+arrow_up=new_split:up
 keybind = cmd+arrow_down=new_split:down
 keybind = cmd+arrow_right=new_split:right
