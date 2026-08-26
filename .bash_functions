@@ -18,66 +18,78 @@ new_dir() {
 
 # Function to kill a process running on a particular port
 kill_port() {
-	kill -9 $(lsof -t -i:$1)
+	local port="${1:-}"
+	[[ -n "$port" ]] || return 2
+	local pids
+	pids="$(lsof -t -i:"$port" 2>/dev/null)" || return 0
+	[[ -n "$pids" ]] && kill -9 $pids
 }
 
 # Kill processes by name regex
 kill_grep() {
-	kill -9 $(pgrep "$1")
+	local pattern="${1:-}"
+	[[ -n "$pattern" ]] || return 2
+	local pids
+	pids="$(pgrep "$pattern" 2>/dev/null)" || return 0
+	[[ -n "$pids" ]] && kill -9 $pids
 }
 
 # Execute a command in each immediate subdirectory
 each-dir() {
-	DIR_NAME=$1
+	local dir_name="$1"
 	shift
-	for directory in ./"$DIR_NAME"/*/ ; do
+	for directory in "./$dir_name"/*/; do
+	  [[ -d "$directory" ]] || continue
 	  print "In $directory"
 	  ( cd "$directory" && echo-exec "$@" )
 	done
 }
 
-# Execute a command in each file matching the pattern
+# Execute a command for each file matching the pattern
 each-file() {
-	DIR_NAME=$1
+	local pattern="$1"
 	shift
-	for file in ./"$DIR_NAME" ; do
+	for file in ./$pattern; do
+	  [[ -f "$file" ]] || continue
 	  print "In $file"
-	  ( echo-exec "$@" )
+	  ( echo-exec "$@" "$file" )
 	done
 }
 
-# INTERNAL: Wrap command in a subshell sourcing bash_profile
+# INTERNAL: Build a command string for concurrently that sources bash_profile.
 bashify() {
-	echo "/bin/bash -c 'source ~/.bash_profile && $*'"
+	printf '/bin/bash -lc %q' "source ~/.bash_profile && $1"
 }
 
 # Run two commands concurrently
 concurrently() {
-	COMMAND_1=$(bashify "$1")
-	COMMAND_2=$(bashify "$2")
-	print-exec npx concurrently "\"$COMMAND_1\"" "\"$COMMAND_2\""
+	local command_1
+	local command_2
+	command_1="$(bashify "$1")"
+	command_2="$(bashify "$2")"
+	print-exec npx concurrently "$command_1" "$command_2"
 }
 
 print-exec() {
 	print "$@"
-	/bin/bash -c "$@"
+	"$@"
 }
 
 echo-exec() {
 	echo "$@"
-	/bin/bash -c "$@"
+	"$@"
 }
 
 # Start a disposable linux Docker container with pwd volume mount
 linux() {
-	docker_args=${4:-""}
-	container_name=${3:-"linuxdev"}
-	base_image=${2:-"ubuntu:latest"}
-	start_cmd=${1:-"bash"}
+	local docker_args=${4:-""}
+	local container_name=${3:-"linuxdev"}
+	local base_image=${2:-"ubuntu:latest"}
+	local start_cmd=${1:-"bash"}
 	print "Starting Docker container - image='$base_image' cmd='$start_cmd' name='$container_name'"
-	echo-exec "docker stop $container_name"
-	echo-exec "docker rm $container_name"
-	echo-exec "docker run -it --name=$container_name $docker_args -v=$(pwd):/app --net=host $base_image /bin/bash -c 'apt-get update -y && cd app && $start_cmd'"
+	docker stop "$container_name" >/dev/null 2>&1 || true
+	docker rm "$container_name" >/dev/null 2>&1 || true
+	docker run -it --name="$container_name" $docker_args -v="$(pwd)":/app --net=host "$base_image" /bin/bash -c "apt-get update -y && cd app && $start_cmd"
 }
 
 # Start a linux Docker container with rbenv & Ruby installed

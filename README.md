@@ -13,7 +13,7 @@ This repository contains my Bash configuration files and scripts to manage them 
 - `.bashrc` - Interactive shell configuration  
 - `.bash_functions` - Custom helper functions
 - `.gitconfig` - Git global configuration
-- `.gitignore` - Global git ignore patterns
+- `.gitignore` - Global Git ignore patterns (installed as `~/.gitignore_global`)
 
 ### Local Configuration Files (not tracked by Git)
 - `.bash_profile.local` - Machine-specific login shell settings
@@ -39,7 +39,7 @@ This repository contains my Bash configuration files and scripts to manage them 
 1. Clone this repository to your home directory:
    ```bash
    cd ~
-   git clone https://github.com/yourusername/dotfiles.git
+   git clone git@github.com:mathiashsteffensen/dotfiles.git
    ```
 
 2. Run the install script:
@@ -64,7 +64,7 @@ The installer also installs the tooling I regularly use from the terminal during
 * Zed text editor
 * Node.js runtime
 
-The installer links Ghostty and Zed settings under `${XDG_CONFIG_HOME:-$HOME/.config}`. It installs `rbenv`, `ruby-build`, and the latest stable Ruby known to `ruby-build`, then selects it as rbenv’s global default. Zed is configured to automatically install its Ruby and Terraform extensions; TypeScript and Go support are built in. The installer also installs `gopls`, `ruby-lsp`, and Zed’s Terraform extension-managed `terraform-ls`. It also links Pi configuration into `~/.pi/agent` (or the directory set by `PI_CODING_AGENT_DIR`). Existing files and directories are backed up as `.bak` before being replaced with symbolic links.
+The installer links Ghostty and Zed settings under `${XDG_CONFIG_HOME:-$HOME/.config}`. It installs `rbenv`, `ruby-build`, and the latest stable Ruby known to `ruby-build`, then selects it as rbenv’s global default. Zed is configured to automatically install its Ruby and Terraform extensions; TypeScript and Go support are built in. The installer also installs `gopls`, `ruby-lsp`, and Zed’s Terraform extension-managed `terraform-ls`. It also links Pi configuration into `~/.pi/agent` (or the directory set by `PI_CODING_AGENT_DIR`). Existing files and directories are backed up as `.bak` (or `.bak.1`, `.bak.2`, etc. when needed) before being replaced with symbolic links.
 
 Ghostty notifications require `desktop-notifications = true` (configured here) and notifications enabled for Ghostty in macOS System Settings. To test the terminal independently of Pi, run this while Ghostty is unfocused:
 ```bash

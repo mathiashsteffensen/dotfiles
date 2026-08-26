@@ -78,16 +78,33 @@ alias cp='cp -i'
 if command -v rbenv >/dev/null 2>&1; then
     eval "$(rbenv init - --no-rehash bash)"
 fi
-go_bin_dir="$(go env GOBIN)"
-if [ -z "$go_bin_dir" ]; then
-    go_bin_dir="$(go env GOPATH)/bin"
+if command -v go >/dev/null 2>&1; then
+    go_path="$(go env GOPATH)"
+    go_bin_dir="$(go env GOBIN)"
+    if [ -z "$go_bin_dir" ]; then
+        go_bin_dir="$go_path/bin"
+    fi
+    export PATH="$go_bin_dir:$go_path/bin:$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH"
+else
+    export PATH="$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH"
 fi
-export PATH="$go_bin_dir:$(go env GOPATH)/bin:$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH"
 export EDITOR="zed --wait"
 export VISUAL="$EDITOR"
 
-# Start SSH Agent
-eval "$(ssh-agent -s)" &> /dev/null || fail
+# Start one SSH agent when no usable agent is already present.
+# ssh-add exits 1 for a reachable agent with no identities and 2 when unreachable.
+ssh_agent_status=2
+if [ -n "${SSH_AUTH_SOCK:-}" ] && [ -S "$SSH_AUTH_SOCK" ] && command -v ssh-add >/dev/null 2>&1; then
+    if ssh-add -l >/dev/null 2>&1; then
+        ssh_agent_status=0
+    else
+        ssh_agent_status=$?
+    fi
+fi
+if command -v ssh-agent >/dev/null 2>&1 && [ "$ssh_agent_status" -ne 0 ] && [ "$ssh_agent_status" -ne 1 ]; then
+    eval "$(ssh-agent -s)" >/dev/null
+fi
+unset ssh_agent_status
 
 # Load machine-specific shell settings. This file is intentionally not tracked.
 if [ -f ~/.bashrc.local ]; then

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -e
+set -o pipefail
 shopt -s nullglob dotglob
 
 function title() {
@@ -20,11 +21,13 @@ function link_config() {
     local source="$1"
     local target="$2"
 
-    if [ -L "$target" ]; then
+    if [[ -L "$target" && "$(readlink "$target")" == "$source" ]]; then
         rm "$target"
-    elif [ -e "$target" ]; then
-        echo "Backing up existing $target to ${target}.bak"
-        mv "$target" "${target}.bak"
+    elif [[ -L "$target" || -e "$target" ]]; then
+        local backup_path
+        backup_path="$(next_available_backup_path "${target}.bak")"
+        echo "Backing up existing $target to $backup_path"
+        mv "$target" "$backup_path"
     fi
 
     echo "Linking $source -> $target"
@@ -69,6 +72,40 @@ function link_extension() {
     ln -s "$source" "$target"
 }
 
+function is_generated_extension_entry() {
+    local name
+    name="$(basename "$1")"
+    [[ "$name" == "node_modules" || "$name" == results.log* ]]
+}
+
+function link_extension_directory() {
+    local source="$1"
+    local target="$2"
+    local backup_dir="$3"
+    local source_entry
+    local target_entry
+
+    if [[ -L "$target" && "$(readlink "$target")" == "$source" ]]; then
+        # Migrate directory symlinks created by older installer versions.
+        rm "$target"
+    elif [[ -L "$target" || ( -e "$target" && ! -d "$target" ) ]]; then
+        backup_extension_entry "$target" "$(dirname "$backup_dir")"
+    fi
+
+    mkdir -p "$target" "$backup_dir"
+
+    for source_entry in "$source"/*; do
+        is_generated_extension_entry "$source_entry" && continue
+
+        target_entry="$target/$(basename "$source_entry")"
+        if [[ -d "$source_entry" && ! -L "$source_entry" ]]; then
+            link_extension_directory "$source_entry" "$target_entry" "$backup_dir/$(basename "$source_entry")"
+        else
+            link_extension "$source_entry" "$target_entry" "$backup_dir"
+        fi
+    done
+}
+
 function install_command_if_not_present() {
     local cmd_name="$1"
     local display_name="$2"
@@ -76,7 +113,7 @@ function install_command_if_not_present() {
 
     if ! command -v "$cmd_name" >/dev/null 2>&1; then
         title "Installing $display_name..."
-        bash -c "$install_script"
+        bash -o pipefail -c "$install_script"
     fi
 }
 
@@ -150,6 +187,7 @@ install_command_if_not_present "brew" "Homebrew" "curl -fsSL https://raw.githubu
 initialize_homebrew
 install_command_if_not_present "ghostty" "Ghostty" "brew install --cask ghostty"
 install_command_if_not_present "go" "Go" "brew install go"
+install_command_if_not_present "node" "Node.js" "brew install node"
 install_go_tool_if_not_present "gopls" "golang.org/x/tools/gopls@latest"
 install_command_if_not_present "rbenv" "rbenv" "brew install rbenv"
 install_command_if_not_present "ruby-build" "ruby-build" "brew install ruby-build"
@@ -177,7 +215,12 @@ for source in "$DOTFILES_DIR"/*; do
     [[ "$source" == *.sh ]] && continue
 
     relative="${source#"$DOTFILES_DIR"/}"
-    link_config "$source" "$HOME/$relative"
+    if [[ "$relative" == ".gitignore" ]]; then
+        target="$HOME/.gitignore_global"
+    else
+        target="$HOME/$relative"
+    fi
+    link_config "$source" "$target"
 done
 section_end
 
@@ -205,9 +248,14 @@ mkdir -p "$pi_extension_target_dir" "$pi_extension_backup_dir"
 
 for source in "$pi_extensions_dir"/*; do
     [[ -f "$source" || -d "$source" ]] || continue
+    is_generated_extension_entry "$source" && continue
 
     relative="${source#"$pi_extensions_dir"/}"
-    link_extension "$source" "$pi_extension_target_dir/$relative" "$pi_extension_backup_dir"
+    if [[ -d "$source" && ! -L "$source" ]]; then
+        link_extension_directory "$source" "$pi_extension_target_dir/$relative" "$pi_extension_backup_dir/$relative"
+    else
+        link_extension "$source" "$pi_extension_target_dir/$relative" "$pi_extension_backup_dir"
+    fi
 done
 section_end
 
