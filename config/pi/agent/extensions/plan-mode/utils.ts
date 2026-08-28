@@ -3,7 +3,7 @@
  * Extracted for testability.
  */
 
-export const PLAN_MODE_TOOLS = ["read", "grep", "find", "ls", "questionnaire"];
+export const PLAN_MODE_TOOLS = ["read", "grep", "find", "ls", "ask_user_question"];
 const PLAN_MODE_DISABLED_TOOLS = new Set<string>(["bash", "edit", "write"]);
 
 export function isPlanModeBlockedTool(toolName: string): boolean {

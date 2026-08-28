@@ -19,5 +19,5 @@ test("plan mode disables Bash and built-in write tools", () => {
 	assert.equal(tools.includes("grep"), true);
 	assert.equal(tools.includes("find"), true);
 	assert.equal(tools.includes("ls"), true);
-	assert.equal(tools.includes("questionnaire"), true);
+	assert.equal(tools.includes("ask_user_question"), true);
 });

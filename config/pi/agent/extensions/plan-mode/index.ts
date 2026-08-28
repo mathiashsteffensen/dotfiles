@@ -205,7 +205,7 @@ Restrictions:
 - Bash and the built-in edit and write tools are disabled
 - Other currently active tools remain available
 
-Ask clarifying questions using the questionnaire tool.
+Ask clarifying questions using the ask_user_question tool.
 Use available read-only tools for code analysis and research.
 
 Create a detailed numbered plan under a "Plan:" header:

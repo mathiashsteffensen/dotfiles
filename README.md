@@ -28,6 +28,7 @@ This repository contains my Bash configuration files and scripts to manage them 
 - `config/pi/agent/settings.json` - Global Pi settings
 - `config/pi/agent/models.json` - Custom Pi model providers
 - `config/pi/agent/APPEND_SYSTEM.md` - Global appended system instructions
+- `config/pi/agent/extensions/ask-user-question.ts` - Structured clarification questions with single- and multi-select support
 - `config/pi/agent/extensions/auto-approve/` - Custom auto-approve extension source
 - `config/pi/agent/extensions/codex-usage/` - Codex subscription weekly usage status extension
 - `config/pi/agent/extensions/notify.ts` - Terminal notification when an agent settles
@@ -72,6 +73,7 @@ sleep 3; printf '\033]777;notify;Ghostty Test;OSC 777 is working\007'
 ```
 
 This configuration includes custom extensions to:
+* Ask structured clarification questions with selectable options, free-text answers, and working multi-select support
 * Run an auto-approve LLM model on all agent commands to determine whether the risk factor requires human review
 * Display weekly Codex subscription usage in the TUI and keep it up-to-date
 * Send a terminal notification when an agent is ready for input
