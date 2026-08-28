@@ -5,7 +5,8 @@
   "packages": [
     "npm:pi-web-access",
     "npm:pi-subagents",
-    "npm:pi-openai-fast-mode"
+    "npm:pi-openai-fast-mode",
+    "git:github.com/DietrichGebert/ponytail"
   ],
   "defaultThinkingLevel": "high",
   "tuiMode": "fullscreen",
