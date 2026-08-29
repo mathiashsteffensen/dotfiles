@@ -28,6 +28,7 @@ This repository contains my Bash configuration files and scripts to manage them 
 - `config/pi/agent/settings.json` - Global Pi settings
 - `config/pi/agent/models.json` - Custom Pi model providers
 - `config/pi/agent/APPEND_SYSTEM.md` - Global appended system instructions
+- `git:github.com/DietrichGebert/ponytail@v4.9.0` - Ponytail package with always-on minimal-code guidance and six skills/commands
 - `config/pi/agent/extensions/ask-user-question.ts` - Structured clarification questions with single- and multi-select support
 - `config/pi/agent/extensions/auto-approve/` - Custom auto-approve extension source
 - `config/pi/agent/extensions/codex-usage/` - Codex subscription weekly usage status extension
@@ -65,7 +66,7 @@ The installer also installs the tooling I regularly use from the terminal during
 * Zed text editor
 * Node.js runtime
 
-The installer links Ghostty and Zed settings under `${XDG_CONFIG_HOME:-$HOME/.config}`. It installs `rbenv`, `ruby-build`, and the latest stable Ruby known to `ruby-build`, then selects it as rbenv’s global default. Zed is configured to automatically install its Ruby and Terraform extensions; TypeScript and Go support are built in. The installer also installs `gopls`, `ruby-lsp`, and Zed’s Terraform extension-managed `terraform-ls`. It also links Pi configuration into `~/.pi/agent` (or the directory set by `PI_CODING_AGENT_DIR`). Existing files and directories are backed up as `.bak` (or `.bak.1`, `.bak.2`, etc. when needed) before being replaced with symbolic links.
+The installer links Ghostty and Zed settings under `${XDG_CONFIG_HOME:-$HOME/.config}`. It installs `rbenv`, `ruby-build`, and the latest stable Ruby known to `ruby-build`, then selects it as rbenv’s global default. Zed is configured to automatically install its Ruby and Terraform extensions; TypeScript and Go support are built in. The installer also installs `gopls`, `ruby-lsp`, and Zed’s Terraform extension-managed `terraform-ls`. It links Pi configuration into `~/.pi/agent` (or the directory set by `PI_CODING_AGENT_DIR`); Pi installs the pinned packages in that configuration on startup. Existing files and directories are backed up as `.bak` (or `.bak.1`, `.bak.2`, etc. when needed) before being replaced with symbolic links.
 
 Ghostty notifications require `desktop-notifications = true` (configured here) and notifications enabled for Ghostty in macOS System Settings. To test the terminal independently of Pi, run this while Ghostty is unfocused:
 ```bash
@@ -79,6 +80,7 @@ This configuration includes custom extensions to:
 * Send a terminal notification when an agent is ready for input
 * Provide read-only plan mode with Bash and write tools disabled, plus tracked execution progress
 * Enable priority service tiers for supported OpenAI models
+* Apply Ponytail’s minimal-code guidance and provide its six skills/commands
 
 ## Local Configuration Management
 

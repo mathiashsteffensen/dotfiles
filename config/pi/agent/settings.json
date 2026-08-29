@@ -6,7 +6,7 @@
     "npm:pi-web-access",
     "npm:pi-subagents",
     "npm:pi-openai-fast-mode",
-    "git:github.com/DietrichGebert/ponytail"
+    "git:github.com/DietrichGebert/ponytail@v4.9.0"
   ],
   "defaultThinkingLevel": "high",
   "tuiMode": "fullscreen",
