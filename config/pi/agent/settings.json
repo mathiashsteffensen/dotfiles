@@ -21,7 +21,7 @@
     "openai-codex/gpt-5.6-sol",
     "openai-codex/gpt-5.6-luna"
   ],
-  "lastChangelogVersion": "0.84.3",
+  "lastChangelogVersion": "0.84.4",
   "editorPaddingX": 0,
   "terminal": {
     "showTerminalProgress": true

@@ -84,17 +84,6 @@ This configuration includes custom extensions to:
 
 ## Local Configuration Management
 
-The repository includes a helper script to manage local configurations:
-
-```bash
-./manage-local-configs.sh
-```
-
-This script explains:
-- Which local files exist and which are missing
-- How to create local configuration files from examples
-- What kind of settings belong in each local file
-
 To set up local configurations:
 1. Copy any `.example` file to remove the `.example` extension
 2. Customize the copied file with your machine-specific settings
