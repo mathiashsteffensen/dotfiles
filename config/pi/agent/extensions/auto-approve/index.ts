@@ -1,4 +1,7 @@
-import { getAgentDir, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import {
+  getAgentDir,
+  type ExtensionAPI,
+} from "@earendil-works/pi-coding-agent";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -16,7 +19,9 @@ const log = (modelId: string, result: string, response: unknown) => {
 
   try {
     const entryWithNewline = `${entry}\n`;
-    const currentLogBytes = fs.existsSync(logFile) ? fs.statSync(logFile).size : 0;
+    const currentLogBytes = fs.existsSync(logFile)
+      ? fs.statSync(logFile).size
+      : 0;
     const entryBytes = Buffer.byteLength(entryWithNewline, "utf8");
 
     if (currentLogBytes + entryBytes > maxLogBytes) {
@@ -43,10 +48,16 @@ export default function (pi: ExtensionAPI) {
 
     const command = event.input.command;
     if (typeof command !== "string") {
-      return { block: true, reason: "Command blocked because its input was invalid" };
+      return {
+        block: true,
+        reason: "Command blocked because its input was invalid",
+      };
     }
 
-    const evaluateSafety = async (prompt: string, cmd: string): Promise<boolean> => {
+    const evaluateSafety = async (
+      prompt: string,
+      cmd: string,
+    ): Promise<boolean> => {
       const model = ctx.modelRegistry.find("openai-codex", "gpt-5.6-luna");
       if (!model) {
         log("gpt-5.6-luna", "UNSAFE", { error: "Safety model is unavailable" });
@@ -54,24 +65,30 @@ export default function (pi: ExtensionAPI) {
       }
 
       try {
-        const data = await ctx.modelRegistry.complete(model, {
-          systemPrompt: [
-            "You are a security classifier.",
-            "Determine whether the user prompt and shell command are safe to execute.",
-            "A command is unsafe if it deletes files, changes permissions, or accesses sensitive information in a way that contradicts the user's intent.",
-            "Respond with exactly one token: SAFE or UNSAFE.",
-          ].join(" "),
-          messages: [{
-            role: "user",
-            content: `User Prompt: ${prompt}\n\nCommand: ${cmd}`,
-            timestamp: Date.now(),
-          }],
-        }, {
-          reasoningEffort: "minimal",
-          reasoningSummary: "concise",
-          signal: ctx.signal,
-          timeoutMs: 30_000,
-        });
+        const data = await ctx.modelRegistry.complete(
+          model,
+          {
+            systemPrompt: [
+              "You are a security classifier.",
+              "Determine whether the user prompt and shell command are safe to execute.",
+              "A command is unsafe if it deletes files, changes permissions, or accesses sensitive information in a way that contradicts the user's intent.",
+              "Respond with exactly one token: SAFE or UNSAFE.",
+            ].join(" "),
+            messages: [
+              {
+                role: "user",
+                content: `User Prompt: ${prompt}\n\nCommand: ${cmd}`,
+                timestamp: Date.now(),
+              },
+            ],
+          },
+          {
+            reasoningEffort: "minimal",
+            reasoningSummary: "concise",
+            signal: ctx.signal,
+            timeoutMs: 30_000,
+          },
+        );
 
         const text = data.content
           .filter((content) => content.type === "text")
@@ -82,7 +99,10 @@ export default function (pi: ExtensionAPI) {
         const isSafe = data.stopReason === "stop" && text === "SAFE";
 
         log(model.id, isSafe ? "SAFE" : "UNSAFE", {
-          reasoning: data.content.filter(content => content.type === "thinking").map(content => content.thinking).join(". "),
+          reasoning: data.content
+            .filter((content) => content.type === "thinking")
+            .map((content) => content.thinking)
+            .join(". "),
           stopReason: data.stopReason,
           errorMessage: data.errorMessage,
           text,
@@ -91,7 +111,10 @@ export default function (pi: ExtensionAPI) {
         return isSafe;
       } catch (error) {
         log(model.id, "UNSAFE", {
-          error: error instanceof Error ? `${error.name}: ${error.message}` : String(error),
+          error:
+            error instanceof Error
+              ? `${error.name}: ${error.message}`
+              : String(error),
         });
         return false;
       }
@@ -101,16 +124,23 @@ export default function (pi: ExtensionAPI) {
 
     if (!isSafe) {
       if (!ctx.hasUI) {
-        return { block: true, reason: "Command deemed unsafe by Auto-Approve AI (no UI available for confirmation)" };
+        return {
+          block: true,
+          reason:
+            "Command deemed unsafe by Auto-Approve AI (no UI available for confirmation)",
+        };
       }
 
       const confirmed = await ctx.ui.confirm(
         `⚠️ Auto-Approve AI flagged this command as unsafe:`,
-        `Command: ${command}\n\nDo you want to proceed?`
+        `Command: ${command}\n\nDo you want to proceed?`,
       );
 
       if (!confirmed) {
-        return { block: true, reason: "Blocked by user after Auto-Approve AI warning" };
+        return {
+          block: true,
+          reason: "Blocked by user after Auto-Approve AI warning",
+        };
       }
     }
   });

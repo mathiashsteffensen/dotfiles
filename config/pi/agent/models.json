@@ -6,24 +6,43 @@
       "apiKey": "lmstudio",
       "models": [
         {
-          "id": "nvidia/nemotron-3-nano-4b",
-          "name": "Nemotron 3 Nano 4B",
-          "input": ["text"],
-          "contextWindow": 64000,
+          "id": "google/gemma-4-12b",
+          "name": "Gemma",
+          "input": ["text", "image"],
+          "contextWindow": 128000,
           "reasoning": true
         },
         {
           "id": "openai/gpt-oss-20b",
           "name": "GPT OSS 20B",
           "input": ["text", "image"],
-          "contextWindow": 64000,
+          "contextWindow": 131072,
           "reasoning": true
         },
         {
-          "id": "qwen/qwen3.8-27b",
+          "id": "qwen/qwen3.5-9b",
           "input": ["text", "image"],
-          "name": "Qwen 3.8 27B",
-          "contextWindow": 64000,
+          "name": "Qwen",
+          "contextWindow": 128000,
+          "reasoning": true
+        }
+      ]
+    },
+    "openrouter": {
+      "apiKey": "$OPENROUTER_API_KEY",
+      "models": [
+        {
+          "id": "deepseek/deepseek-v4-flash",
+          "name": "Deepseek v4 Flash",
+          "input": ["text", "image"],
+          "contextWindow": 1000000,
+          "reasoning": true
+        },
+        {
+          "id": "z-ai/glm-5.3-flash",
+          "name": "GLM 5.3 Flash",
+          "input": ["text", "image"],
+          "contextWindow": 1000000,
           "reasoning": true
         }
       ]

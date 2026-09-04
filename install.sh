@@ -252,7 +252,14 @@ for source in "$pi_extensions_dir"/*; do
 
     relative="${source#"$pi_extensions_dir"/}"
     if [[ -d "$source" && ! -L "$source" ]]; then
+        if [[ -f "$source/package.json" ]]; then
+            echo "Installing dependencies for Pi extension $relative..."
+            npm install --prefix "$source"
+        fi
         link_extension_directory "$source" "$pi_extension_target_dir/$relative" "$pi_extension_backup_dir/$relative"
+        if [[ -d "$source/node_modules" ]]; then
+            link_extension "$source/node_modules" "$pi_extension_target_dir/$relative/node_modules" "$pi_extension_backup_dir/$relative"
+        fi
     else
         link_extension "$source" "$pi_extension_target_dir/$relative" "$pi_extension_backup_dir"
     fi

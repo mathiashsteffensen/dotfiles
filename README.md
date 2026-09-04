@@ -35,6 +35,7 @@ This repository contains my Bash configuration files and scripts to manage them 
 - `config/pi/agent/extensions/notify.ts` - Terminal notification when an agent settles
 - `config/pi/agent/extensions/plan-mode/` - Read-only planning with Bash and write tools disabled, plus tracked execution
 - `config/pi/agent/extensions/pi-openai-fast-mode/` - Priority-service configuration for supported OpenAI models
+- `config/pi/agent/extensions/ui-review/` - `/ux-review`, reusable manual login state, browser screenshots, and automated axe accessibility audits
 
 ## Installation
 
@@ -80,6 +81,7 @@ This configuration includes custom extensions to:
 * Send a terminal notification when an agent is ready for input
 * Provide read-only plan mode with Bash and write tools disabled, plus tracked execution progress
 * Enable priority service tiers for supported OpenAI models
+* Review rendered web UIs with screenshots and automated axe accessibility audits
 * Apply Ponytail’s minimal-code guidance and provide its six skills/commands
 
 ## Local Configuration Management

@@ -1,7 +1,7 @@
 {
   "theme": "dark",
   "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-5.6-luna",
+  "defaultModel": "gpt-5.6-sol",
   "packages": [
     "npm:pi-web-access",
     "npm:pi-subagents",
@@ -14,12 +14,20 @@
   "quietStartup": true,
   "defaultProjectTrust": "ask",
   "modelThinkingLevels": {
-    "openai-codex/gpt-5.6-luna": "high",
-    "openai-codex/gpt-5.6-sol": "medium"
+    "openai-codex/gpt-5.6-luna": "xhigh",
+    "openai-codex/gpt-5.6-sol": "xhigh",
+    "local/qwen/qwen3.8-27b": "xhigh",
+    "local/google/gemma-4-26b-a4b-qat": "xhigh",
+    "local/openai/gpt-oss-20b": "xhigh"
   },
   "enabledModels": [
     "openai-codex/gpt-5.6-sol",
-    "openai-codex/gpt-5.6-luna"
+    "openai-codex/gpt-5.6-luna",
+    "local/qwen/qwen3.5-9b",
+    "local/google/gemma-4-12b",
+    "local/openai/gpt-oss-20b",
+    "openrouter/deepseek/deepseek-v4-flash",
+    "openrouter/z-ai/glm-5.3-flash"
   ],
   "lastChangelogVersion": "0.84.4",
   "editorPaddingX": 0,
