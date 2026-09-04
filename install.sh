@@ -195,6 +195,7 @@ eval "$(rbenv init - --no-rehash bash)"
 install_latest_ruby_if_not_present
 if command -v gem >/dev/null 2>&1 && ruby -rrubygems -e 'abort if Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.0")'; then
     install_ruby_gem_if_not_present "ruby-lsp"
+    install_ruby_gem_if_not_present "rubocop"
 elif command -v gem >/dev/null 2>&1; then
     echo "Skipping ruby-lsp: Ruby 3.0 or newer is required."
 else
