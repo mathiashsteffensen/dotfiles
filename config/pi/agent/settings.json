@@ -1,10 +1,10 @@
 {
   "theme": "dark",
   "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-5.6-sol",
+  "defaultModel": "gpt-6-astra",
   "packages": [
     "npm:pi-web-access",
-    "npm:pi-subagents",
+    "npm:pi-subagents@0.64.0",
     "npm:pi-openai-fast-mode",
     "git:github.com/DietrichGebert/ponytail@v4.9.0"
   ],
@@ -15,21 +15,21 @@
   "defaultProjectTrust": "ask",
   "modelThinkingLevels": {
     "openai-codex/gpt-5.6-luna": "xhigh",
-    "openai-codex/gpt-5.6-sol": "xhigh",
+    "openai-codex/gpt-6-astra": "xhigh",
     "local/qwen/qwen3.8-27b": "xhigh",
     "local/google/gemma-4-26b-a4b-qat": "xhigh",
     "local/openai/gpt-oss-20b": "xhigh"
   },
   "enabledModels": [
-    "openai-codex/gpt-5.6-sol",
+    "openai-codex/gpt-6-astra",
     "openai-codex/gpt-5.6-luna",
     "local/qwen/qwen3.5-9b",
     "local/google/gemma-4-12b",
     "local/openai/gpt-oss-20b",
-    "openrouter/deepseek/deepseek-v4-flash",
-    "openrouter/z-ai/glm-5.3-flash"
+    "openrouter/deepseek/deepseek-v4-flash:nitro",
+    "openrouter/z-ai/glm-5.3-flash:nitro"
   ],
-  "lastChangelogVersion": "0.84.4",
+  "lastChangelogVersion": "0.85.1",
   "editorPaddingX": 0,
   "terminal": {
     "showTerminalProgress": true

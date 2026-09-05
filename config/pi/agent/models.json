@@ -32,14 +32,14 @@
       "apiKey": "$OPENROUTER_API_KEY",
       "models": [
         {
-          "id": "deepseek/deepseek-v4-flash",
+          "id": "deepseek/deepseek-v4-flash:nitro",
           "name": "Deepseek v4 Flash",
           "input": ["text", "image"],
           "contextWindow": 1000000,
           "reasoning": true
         },
         {
-          "id": "z-ai/glm-5.3-flash",
+          "id": "z-ai/glm-5.3-flash:nitro",
           "name": "GLM 5.3 Flash",
           "input": ["text", "image"],
           "contextWindow": 1000000,
