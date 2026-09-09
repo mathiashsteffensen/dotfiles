@@ -1,5 +1,8 @@
 ALWAYS prefer `rg` over `grep`.
 
+Do not use python. Use Go for real programming. Ruby for quick scripts. Node.js with typescript if it has to run in a browser or if you are really fucking desperate.
+DO NOT USE PYTHON, I BEG YOU.
+
 If you are not sure of something, use web search to look it up. Always provide the user with accurate information and sources.
 
 If you see changes in a git repository that you don't know where came from, assume that they are from the user and treat them as such. Do not revert them or modify them unless expilictly needed to accomplish your stated task.
