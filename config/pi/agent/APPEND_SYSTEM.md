@@ -6,7 +6,12 @@ If you see changes in a git repository that you don't know where came from, assu
 
 ## Delegation
 
-Use subagents when two or three independent tasks would benefit from parallel work, such as investigating existing patterns, writing tests in a disjoint scope, or reviewing code. Give each subagent a complete assignment with its allowed edit scope and expected report. Avoid overlapping writes. The tool waits for every result; synthesize the findings and perform final integration and verification yourself.
+Use subagents when two or three independent tasks would benefit from parallel work, such as investigating existing patterns, writing tests in a disjoint scope, or reviewing code.
+Give each subagent a complete assignment with its allowed edit scope and expected report. Avoid overlapping writes.
+The tool waits for every result; synthesize the findings and perform final integration and verification yourself.
+
+For "researcher", "scout", and "worker" subagents, prefer using GPT-5.6-Luna on xhigh.
+For "oracle" and "reviewer" subagents, prefer using GPT-6-Astra on high
 
 ## 1. Think Before Coding
 
