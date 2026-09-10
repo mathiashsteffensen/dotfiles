@@ -1,7 +1,7 @@
 {
   "theme": "dark",
-  "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-6-astra",
+  "defaultProvider": "openrouter",
+  "defaultModel": "openrouter/qwen/qwen3.8-max-0902",
   "packages": [
     "npm:pi-web-access",
     "npm:pi-subagents@0.64.0",
@@ -14,20 +14,18 @@
   "quietStartup": true,
   "defaultProjectTrust": "ask",
   "modelThinkingLevels": {
+    "openrouter/qwen/qwen3.8-max-0902": "high",
+    "openrouter/google/gemini-3.8-flash": "high",
+    "openrouter/z-ai/glm-5.3-flash:nitro": "high",
     "openai-codex/gpt-5.6-luna": "xhigh",
-    "openai-codex/gpt-6-astra": "xhigh",
-    "local/qwen/qwen3.8-27b": "xhigh",
-    "local/google/gemma-4-26b-a4b-qat": "xhigh",
-    "local/openai/gpt-oss-20b": "xhigh"
+    "openai-codex/gpt-6-astra": "xhigh"
   },
   "enabledModels": [
+    "openrouter/qwen/qwen3.8-max-0902",
+    "openrouter/google/gemini-3.8-flash",
+    "openrouter/google/gemini-2.5-flash-lite:nitro",
     "openai-codex/gpt-6-astra",
-    "openai-codex/gpt-5.6-luna",
-    "local/qwen/qwen3.5-9b",
-    "local/google/gemma-4-12b",
-    "local/openai/gpt-oss-20b",
-    "openrouter/deepseek/deepseek-v4-flash:nitro",
-    "openrouter/z-ai/glm-5.3-flash:nitro"
+    "openai-codex/gpt-5.6-luna"
   ],
   "lastChangelogVersion": "0.85.1",
   "editorPaddingX": 0,

@@ -1,0 +1,6 @@
+{
+  "openrouter": {
+    "limit": 50,
+    "period": "monthly"
+  }
+}

@@ -1,46 +1,25 @@
 {
   "providers": {
-    "local": {
-      "baseUrl": "http://127.0.0.1:1234/v1",
-      "api": "openai-completions",
-      "apiKey": "lmstudio",
-      "models": [
-        {
-          "id": "google/gemma-4-12b",
-          "name": "Gemma",
-          "input": ["text", "image"],
-          "contextWindow": 128000,
-          "reasoning": true
-        },
-        {
-          "id": "openai/gpt-oss-20b",
-          "name": "GPT OSS 20B",
-          "input": ["text", "image"],
-          "contextWindow": 131072,
-          "reasoning": true
-        },
-        {
-          "id": "qwen/qwen3.5-9b",
-          "input": ["text", "image"],
-          "name": "Qwen",
-          "contextWindow": 128000,
-          "reasoning": true
-        }
-      ]
-    },
     "openrouter": {
       "apiKey": "$OPENROUTER_API_KEY",
       "models": [
         {
-          "id": "deepseek/deepseek-v4-flash:nitro",
-          "name": "Deepseek v4 Flash",
+          "id": "qwen/qwen3.8-max-0902",
+          "name": "Qwen 3.8 Max",
           "input": ["text", "image"],
           "contextWindow": 1000000,
           "reasoning": true
         },
         {
-          "id": "z-ai/glm-5.3-flash:nitro",
-          "name": "GLM 5.3 Flash",
+          "id": "google/gemini-3.8-flash",
+          "name": "Gemini 3.8 Flash",
+          "input": ["text", "image"],
+          "contextWindow": 1000000,
+          "reasoning": true
+        },
+        {
+          "id": "google/gemini-2.5-flash-lite:nitro",
+          "name": "Gemini 2.5 Flash-Lite",
           "input": ["text", "image"],
           "contextWindow": 1000000,
           "reasoning": true

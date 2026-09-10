@@ -1,6 +1,6 @@
+import { readFileSync } from "node:fs";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 
-const PROVIDER_ID = "openai-codex";
 const DEFAULT_BASE_URL = "https://chatgpt.com/backend-api";
 const REFRESH_INTERVAL_MS = 60_000;
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -78,6 +78,26 @@ export const formatResetDate = (resetAt: number): string => {
 		: new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
 };
 
+export const getOpenRouterUsage = (payload: unknown, budget: unknown) => {
+	const config = asRecord(budget);
+	const limit = config?.limit;
+	const period = config?.period;
+	if (typeof limit !== "number" || !Number.isFinite(limit) || limit <= 0) return undefined;
+	if (period !== "daily" && period !== "weekly" && period !== "monthly") return undefined;
+
+	const data = asRecord(asRecord(payload)?.data);
+	let used = data?.[`usage_${period}`];
+	if (typeof used !== "number" || !Number.isFinite(used) || used < 0) return undefined;
+	if (data?.include_byok_in_limit === true) {
+		const byok = data[`byok_usage_${period}`];
+		if (typeof byok !== "number" || !Number.isFinite(byok) || byok < 0) return undefined;
+		used += byok;
+	}
+
+	const percent = used / limit * 100;
+	return Number.isFinite(percent) ? { period, used, limit, percent } : undefined;
+};
+
 const getUsage = async (
 	accessToken: string,
 	accountId: string,
@@ -119,11 +139,14 @@ export default function (pi: ExtensionAPI) {
 	let activeRefreshController: AbortController | undefined;
 
 	const setStatus = (ctx: ExtensionContext, text: string, color: "dim" | "success" | "warning" | "error" = "dim") => {
-		ctx.ui.setStatus("codex-usage", ctx.ui.theme.fg(color, text));
+		ctx.ui.setStatus("usage-display", ctx.ui.theme.fg(color, text));
 	};
 
 	const refresh = async (ctx: ExtensionContext) => {
 		if (activeRefreshController || ctx.mode !== "tui") return;
+		const provider = ctx.model?.provider;
+		if (provider !== "openai-codex" && provider !== "openrouter") return;
+		const label = provider === "openrouter" ? "OpenRouter Usage" : "Codex Weekly Usage";
 
 		const generation = sessionGeneration;
 		const controller = new AbortController();
@@ -131,10 +154,34 @@ export default function (pi: ExtensionAPI) {
 		const isActive = () => generation === sessionGeneration && !controller.signal.aborted;
 
 		try {
-			const auth = await ctx.modelRegistry.getProviderAuth(PROVIDER_ID);
+			const auth = await ctx.modelRegistry.getProviderAuth(provider);
+			if (!isActive()) return;
 			const accessToken = auth?.auth.apiKey;
 			if (!accessToken) {
-				if (isActive()) ctx.ui.setStatus("codex-usage", undefined);
+				if (isActive()) ctx.ui.setStatus("usage-display", undefined);
+				return;
+			}
+
+			if (provider === "openrouter") {
+				const config = asRecord(JSON.parse(readFileSync(new URL("./config.json", import.meta.url), "utf8")));
+				const response = await fetch("https://openrouter.ai/api/v1/key", {
+					headers: { Authorization: `Bearer ${accessToken}`, "Cache-Control": "no-cache" },
+					signal: AbortSignal.any([controller.signal, AbortSignal.timeout(REQUEST_TIMEOUT_MS)]),
+				});
+				if (!response.ok) throw new Error(`Usage request failed with HTTP ${response.status}`);
+				const payload = await response.json();
+				if (!isActive()) return;
+
+				const usage = getOpenRouterUsage(payload, config?.openrouter);
+				if (!usage) throw new Error("OpenRouter usage or budget configuration is unavailable");
+				const { percent, used, limit, period } = usage;
+				const periodLabel = period[0].toUpperCase() + period.slice(1);
+				const color = percent >= 90 ? "error" : percent >= 75 ? "warning" : "success";
+				setStatus(
+					ctx,
+					`OpenRouter ${periodLabel} Usage: ${percent % 1 === 0 ? percent : percent.toFixed(1)}% used ($${used.toFixed(2)} / $${limit.toFixed(2)})`,
+					color,
+				);
 				return;
 			}
 
@@ -156,22 +203,29 @@ export default function (pi: ExtensionAPI) {
 				color,
 			);
 		} catch {
-			if (isActive()) setStatus(ctx, "Codex Weekly Usage: unavailable");
+			if (isActive()) setStatus(ctx, `${label}: unavailable`);
 		} finally {
 			if (activeRefreshController === controller) activeRefreshController = undefined;
 		}
 	};
 
-	pi.on("session_start", async (_event, ctx) => {
+	const start = (ctx: ExtensionContext) => {
 		if (ctx.mode !== "tui") return;
 		sessionGeneration++;
 		activeRefreshController?.abort();
 		activeRefreshController = undefined;
 		if (refreshTimer) clearInterval(refreshTimer);
-		setStatus(ctx, "Codex Weekly Usage: loading...");
+		refreshTimer = undefined;
+		ctx.ui.setStatus("usage-display", undefined);
+		const provider = ctx.model?.provider;
+		if (provider !== "openai-codex" && provider !== "openrouter") return;
+		setStatus(ctx, provider === "openrouter" ? "OpenRouter Usage: loading..." : "Codex Weekly Usage: loading...");
 		void refresh(ctx);
 		refreshTimer = setInterval(() => void refresh(ctx), REFRESH_INTERVAL_MS);
-	});
+	};
+
+	pi.on("session_start", async (_event, ctx) => start(ctx));
+	pi.on("model_select", async (_event, ctx) => start(ctx));
 
 	pi.on("agent_settled", async (_event, ctx) => {
 		void refresh(ctx);
@@ -183,6 +237,6 @@ export default function (pi: ExtensionAPI) {
 		activeRefreshController = undefined;
 		if (refreshTimer) clearInterval(refreshTimer);
 		refreshTimer = undefined;
-		ctx.ui.setStatus("codex-usage", undefined);
+		ctx.ui.setStatus("usage-display", undefined);
 	});
 }

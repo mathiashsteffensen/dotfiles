@@ -31,7 +31,7 @@ This repository contains my Bash configuration files and scripts to manage them 
 - `git:github.com/DietrichGebert/ponytail@v4.9.0` - Ponytail package with always-on minimal-code guidance and six skills/commands
 - `config/pi/agent/extensions/ask-user-question.ts` - Structured clarification questions with single- and multi-select support
 - `config/pi/agent/extensions/auto-approve/` - Custom auto-approve extension source
-- `config/pi/agent/extensions/codex-usage/` - Codex subscription weekly usage status extension
+- `config/pi/agent/extensions/usage-display/` - Model-aware Codex subscription and OpenRouter budget usage status
 - `config/pi/agent/extensions/notify.ts` - Terminal notification when an agent settles
 - `config/pi/agent/extensions/plan-mode/` - Read-only planning with Bash and write tools disabled, plus tracked execution
 - `config/pi/agent/extensions/pi-openai-fast-mode/` - Priority-service configuration for supported OpenAI models
@@ -77,12 +77,37 @@ sleep 3; printf '\033]777;notify;Ghostty Test;OSC 777 is working\007'
 This configuration includes custom extensions to:
 * Ask structured clarification questions with selectable options, free-text answers, and working multi-select support
 * Run an auto-approve LLM model on all agent commands to determine whether the risk factor requires human review
-* Display weekly Codex subscription usage in the TUI and keep it up-to-date
+* Display weekly Codex subscription usage or OpenRouter budget usage for the selected provider, refreshing every minute and when the agent settles
 * Send a terminal notification when an agent is ready for input
 * Provide read-only plan mode with Bash and write tools disabled, plus tracked execution progress
 * Enable priority service tiers for supported OpenAI models
 * Review rendered web UIs with screenshots and automated axe accessibility audits
 * Apply Ponytail’s minimal-code guidance and provide its six skills/commands
+
+## Pi Usage Budget
+
+The usage footer switches automatically with the selected model: Codex shows weekly subscription usage; OpenRouter shows the API key's spend against a configurable USD budget. Other providers hide the status.
+
+Edit `config/pi/agent/extensions/usage-display/config.json` (linked to `~/.pi/agent/extensions/usage-display/config.json`):
+
+```json
+{
+  "openrouter": {
+    "limit": 50,
+    "period": "monthly"
+  }
+}
+```
+
+`limit` must be a positive number; `period` accepts `daily`, `weekly`, or `monthly`. Each is the current UTC calendar period (weeks run Monday–Sunday), not a rolling window. Changes take effect on the next refresh. This is a display-only budget, not a change to OpenRouter's enforced API-key limit. Percentages can exceed 100% if you exceed the configured display budget.
+
+Usage comes from OpenRouter's [current-key endpoint](https://openrouter.ai/docs/api/api-reference/api-keys/get-current-api-key), using Pi's existing OpenRouter credentials. It includes all OpenRouter-credit spending on that key, not just this Pi session, plus BYOK spending when the key's `include_byok_in_limit` setting is enabled. Missing usage or request/configuration errors show `unavailable` rather than 0%.
+
+Run the usage checks with:
+
+```bash
+node --test config/pi/agent/extensions/usage-display/index.test.ts
+```
 
 ## Local Configuration Management
 
