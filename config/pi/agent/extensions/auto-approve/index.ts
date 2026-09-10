@@ -36,6 +36,22 @@ const log = (modelId: string, result: string, response: unknown) => {
 };
 
 export default function (pi: ExtensionAPI) {
+  // ponytail: config read once at load; re-read per call if hot-reload is wanted
+  const config = (() => {
+    try {
+      const raw = JSON.parse(
+        fs.readFileSync(new URL("./config.json", import.meta.url), "utf8"),
+      );
+      const provider =
+        typeof raw?.provider === "string" ? raw.provider.trim() : "";
+      const model =
+        typeof raw?.model === "string" ? raw.model.trim() : "";
+      return provider && model ? { provider, model } : undefined;
+    } catch {
+      return undefined;
+    }
+  })();
+
   let currentPrompt = "";
 
   // Capture the prompt for context
@@ -58,9 +74,16 @@ export default function (pi: ExtensionAPI) {
       prompt: string,
       cmd: string,
     ): Promise<boolean> => {
-      const model = ctx.modelRegistry.find("openai-codex", "gpt-5.6-luna");
+      if (!config) {
+        log("unconfigured", "UNSAFE", { error: "Safety model is unconfigured" });
+        return false;
+      }
+
+      const model = ctx.modelRegistry.find(config.provider, config.model);
       if (!model) {
-        log("gpt-5.6-luna", "UNSAFE", { error: "Safety model is unavailable" });
+        log(`${config.provider}/${config.model}`, "UNSAFE", {
+          error: "Safety model is unavailable",
+        });
         return false;
       }
 
@@ -83,7 +106,7 @@ export default function (pi: ExtensionAPI) {
             ],
           },
           {
-            reasoningEffort: "minimal",
+            reasoningEffort: "none",
             reasoningSummary: "concise",
             signal: ctx.signal,
             timeoutMs: 30_000,

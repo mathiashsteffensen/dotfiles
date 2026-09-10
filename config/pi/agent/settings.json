@@ -16,7 +16,6 @@
   "modelThinkingLevels": {
     "openrouter/qwen/qwen3.8-max-0902": "high",
     "openrouter/google/gemini-3.8-flash": "high",
-    "openrouter/z-ai/glm-5.3-flash:nitro": "high",
     "openai-codex/gpt-5.6-luna": "xhigh",
     "openai-codex/gpt-6-astra": "xhigh"
   },

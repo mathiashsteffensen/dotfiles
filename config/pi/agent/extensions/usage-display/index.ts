@@ -47,7 +47,7 @@ const getWeeklyWindow = (payload: unknown): JsonRecord | undefined => {
 	});
 };
 
-export const getWeeklyUsagePercent = (payload: unknown): number | undefined => {
+const getWeeklyUsagePercent = (payload: unknown): number | undefined => {
 	const weeklyWindow = getWeeklyWindow(payload);
 	if (!weeklyWindow) return undefined;
 
@@ -59,7 +59,7 @@ export const getWeeklyUsagePercent = (payload: unknown): number | undefined => {
 	return Number.isFinite(percent) ? Math.max(0, Math.min(100, percent)) : undefined;
 };
 
-export const getWeeklyUsageResetAt = (payload: unknown): number | undefined => {
+const getWeeklyUsageResetAt = (payload: unknown): number | undefined => {
 	const weeklyWindow = getWeeklyWindow(payload);
 	if (!weeklyWindow) return undefined;
 
@@ -71,14 +71,14 @@ export const getWeeklyUsageResetAt = (payload: unknown): number | undefined => {
 	return Number.isFinite(resetAt) && resetAt > 0 ? resetAt : undefined;
 };
 
-export const formatResetDate = (resetAt: number): string => {
+const formatResetDate = (resetAt: number): string => {
 	const date = new Date(resetAt * 1000);
 	return Number.isNaN(date.getTime())
 		? "unknown"
 		: new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
 };
 
-export const getOpenRouterUsage = (payload: unknown, budget: unknown) => {
+const getOpenRouterUsage = (payload: unknown, budget: unknown) => {
 	const config = asRecord(budget);
 	const limit = config?.limit;
 	const period = config?.period;
