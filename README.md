@@ -103,12 +103,6 @@ Edit `config/pi/agent/extensions/usage-display/config.json` (linked to `~/.pi/ag
 
 Usage comes from OpenRouter's [current-key endpoint](https://openrouter.ai/docs/api/api-reference/api-keys/get-current-api-key), using Pi's existing OpenRouter credentials. It includes all OpenRouter-credit spending on that key, not just this Pi session, plus BYOK spending when the key's `include_byok_in_limit` setting is enabled. Missing usage or request/configuration errors show `unavailable` rather than 0%.
 
-Run the usage checks with:
-
-```bash
-node --test config/pi/agent/extensions/usage-display/index.test.ts
-```
-
 ## Local Configuration Management
 
 To set up local configurations:
