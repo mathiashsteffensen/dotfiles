@@ -1,14 +1,14 @@
 {
   "theme": "dark",
-  "defaultProvider": "openrouter",
-  "defaultModel": "openrouter/qwen/qwen3.8-max-0902",
+  "defaultProvider": "openai-codex",
+  "defaultModel": "gpt-6-astra",
   "packages": [
     "npm:pi-web-access",
     "npm:pi-subagents@0.64.0",
     "npm:pi-openai-fast-mode",
     "git:github.com/DietrichGebert/ponytail@v4.9.0"
   ],
-  "defaultThinkingLevel": "high",
+  "defaultThinkingLevel": "medium",
   "tuiMode": "fullscreen",
   "enableInstallTelemetry": false,
   "quietStartup": true,
@@ -16,14 +16,18 @@
   "modelThinkingLevels": {
     "openrouter/qwen/qwen3.8-max-0902": "high",
     "openrouter/google/gemini-3.8-flash": "high",
+    "openrouter/minimax/minimax-m3": "high",
     "openai-codex/gpt-5.6-luna": "xhigh",
-    "openai-codex/gpt-6-astra": "xhigh"
+    "openai-codex/gpt-6-astra": "medium",
+    "openai-codex/gpt-5.6-sol": "medium"
   },
   "enabledModels": [
     "openrouter/qwen/qwen3.8-max-0902",
+    "openrouter/minimax/minimax-m3",
     "openrouter/google/gemini-3.8-flash",
     "openrouter/google/gemini-2.5-flash-lite:nitro",
     "openai-codex/gpt-6-astra",
+    "openai-codex/gpt-5.6-sol",
     "openai-codex/gpt-5.6-luna"
   ],
   "lastChangelogVersion": "0.85.1",

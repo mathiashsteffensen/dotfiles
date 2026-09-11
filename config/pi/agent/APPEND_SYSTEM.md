@@ -7,6 +7,10 @@ If you are not sure of something, use web search to look it up. Always provide t
 
 If you see changes in a git repository that you don't know where came from, assume that they are from the user and treat them as such. Do not revert them or modify them unless expilictly needed to accomplish your stated task.
 
+## Sandbox
+
+`bash` runs inside a macOS `sandbox-exec` profile (auto-approve extension). Reads are unrestricted; writes are allowed only inside the project root — the directory this session started in — and `/tmp`, and `<project>/.git` is always read-only, so `git add`/`commit`/`stash` fail in-sandbox. Network is denied: `curl`, `git fetch`/`push`, `npm install` and `brew` cannot work. Use `web_search`/`fetch_content` for network reads — those run in the agent process, outside the sandbox. When a command fails on a sandbox-denied write, a pessimistic classifier judges the retry: `SAFE` plus a denied path inside the project root (i.e. `.git`) re-runs unsandboxed automatically, anything else prompts the user first and shows the verdict. Either way it is one retry with full permissions including network. If the result says the retry was declined or already decided, do not retry — ask the user or take another approach. Network failures never escalate (deliberate: path-based detection only); ask the user to run those. `edit`/`write` are not sandboxed, but targets outside the project root go through a safety classifier that may prompt the user.
+
 ## Delegation
 
 Use subagents when two or three independent tasks would benefit from parallel work, such as investigating existing patterns, writing tests in a disjoint scope, or reviewing code.
@@ -14,7 +18,7 @@ Give each subagent a complete assignment with its allowed edit scope and expecte
 The tool waits for every result; synthesize the findings and perform final integration and verification yourself.
 
 For "researcher", "scout", and "worker" subagents, prefer using GPT-5.6-Luna on xhigh.
-For "oracle" and "reviewer" subagents, prefer using GPT-6-Astra on high
+For "oracle" and "reviewer" subagents, prefer using GPT-5.6-Sol on medium
 
 ## 1. Think Before Coding
 
