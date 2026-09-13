@@ -27,7 +27,7 @@ alias gst="git status"
 alias gl="git pull --rebase"
 alias gp="git push"
 alias gpf="git push -f"
-alias gps="gss && gp && gsp"
+alias gps="git push"
 alias gd="git diff --cached ."
 alias gc="git commit -v"
 alias gca="git commit -v -a"
@@ -75,6 +75,15 @@ alias cp='cp -i'
 # ------------------------------------------------------------------------------
 #  Environment Path Setup
 # ------------------------------------------------------------------------------
+if [[ "$OSTYPE" == darwin* ]]; then
+    for brew_prefix in /opt/homebrew /usr/local; do
+        if [[ -x "$brew_prefix/bin/brew" ]]; then
+            eval "$("$brew_prefix/bin/brew" shellenv)"
+            break
+        fi
+    done
+    unset brew_prefix
+fi
 if command -v rbenv >/dev/null 2>&1; then
     eval "$(rbenv init - --no-rehash bash)"
 fi

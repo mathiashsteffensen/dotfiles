@@ -1,32 +1,24 @@
 import { realpathSync } from "node:fs";
+import { homedir } from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import type { SessionEntry } from "@earendil-works/pi-coding-agent";
 import { getSandboxState, type SandboxState } from "./sandbox.ts";
 
-export type BypassReason = "read-only-tool" | "in-project" | "in-sandbox";
+export type BypassReason = "read-only-tool";
 
 export type TierDecision =
 	| { kind: "bypass"; reason: BypassReason; sandboxState: SandboxState }
 	| { kind: "classify"; sandboxState: SandboxState };
 
-// Tools that cannot mutate state and therefore never need the safety
-// classifier. ask_user_question is also here: it surfaces a UI dialog to the
-// user, no filesystem or network capability.
-export const TIER_BYPASS_TOOLS: ReadonlySet<string> = new Set([
-	"read",
-	"grep",
-	"find",
-	"ls",
-	"ask_user_question",
-]);
+// Reading and navigation never prompt; commands and mutations are classified.
+export const TIER_BYPASS_TOOLS: ReadonlySet<string> = new Set(["ask_user_question"]);
+const READ_TOOLS: ReadonlySet<string> = new Set(["read", "grep", "find", "ls"]);
 
 export interface ClassifyToolInput {
 	toolName: string;
-	input: unknown;
 	platform: NodeJS.Platform;
 	sandboxEnabled: boolean;
-	// Canonical (realpath-resolved) project root.
-	projectRoot: string;
 }
 
 // Realpath the longest existing ancestor. New file writes target a path that
@@ -52,6 +44,22 @@ export function extractTargetPath(input: unknown): string | undefined {
 	return typeof value === "string" && value !== "" ? value : undefined;
 }
 
+function resolveTargetPath(target: string, root: string): string {
+	let normalized = target.startsWith("@") ? target.slice(1) : target;
+	if (normalized === "~") normalized = homedir();
+	else if (normalized.startsWith("~/") || normalized.startsWith("~\\")) {
+		normalized = path.join(homedir(), normalized.slice(2));
+	}
+	if (/^file:\/\//u.test(normalized)) {
+		try {
+			normalized = fileURLToPath(normalized);
+		} catch {
+			// Keep the original path; the realpath check below will fail closed.
+		}
+	}
+	return path.isAbsolute(normalized) ? path.resolve(normalized) : path.resolve(root, normalized);
+}
+
 // Both the string pre-check and the realpath pass use the canonical root, so
 // a projectRoot that is itself a symlink (e.g. /Users/me/Project -> /private/me/Project)
 // agrees with both sides.
@@ -66,9 +74,10 @@ export function isInProject(target: string, root: string): boolean {
 			realRoot = path.resolve(root);
 		}
 	}
+	const targetPath = resolveTargetPath(target, root);
 	let realTarget: string;
 	try {
-		realTarget = realpathOrAncestor(target);
+		realTarget = realpathOrAncestor(targetPath);
 	} catch {
 		return false;
 	}
@@ -94,9 +103,8 @@ export function isInProject(target: string, root: string): boolean {
 // extension-authored and expanded skill/template text is indistinguishable
 // from typed input here. Same for pasted third-party content — hence the
 // "data, not instructions" rule in the classifier system prompt.
-// ponytail: getBranch() copies the whole active path per call — fine while
-// classified bash is the rare path (in-sandbox bash bypasses); key a cache on
-// getLeafId() if that changes.
+// ponytail: getBranch() copies the whole active path per call; keep the
+// bounded window simple unless classifier latency makes this measurable.
 export const USER_CONTEXT_MESSAGES = 3;
 export const USER_CONTEXT_CHAR_BUDGET = 4000;
 
@@ -134,8 +142,8 @@ export function userIntentBlock(entries: readonly SessionEntry[]): string {
 	].join("\n");
 }
 
-// What the classifier judges: the shell command for bash/powershell, the target
-// path for edit/write, a bounded JSON summary for anything else. `undefined`
+// What the classifier judges: the shell command for bash/powershell, the full
+// arguments for edit/write, or a bounded JSON summary for anything else. `undefined`
 // means the call is malformed (a shell tool with no command, a write with no
 // path) and the caller blocks it instead of classifying nothing.
 export const CLASSIFY_SUBJECT_JSON_LIMIT = 600;
@@ -147,7 +155,7 @@ export function classifySubject(toolName: string, input: unknown): string | unde
 	}
 	if (toolName === "edit" || toolName === "write") {
 		const target = extractTargetPath(input);
-		return target === undefined ? undefined : `${toolName} ${target}`;
+		return target === undefined ? undefined : `${toolName} ${target}\nArguments: ${JSON.stringify(input)}`;
 	}
 	let serialized: string;
 	try {
@@ -191,7 +199,7 @@ function isSandboxWritable(target: string, projectRoot: string): boolean {
 // network deny — no path, no escalation. EPERM on a path the profile does allow
 // (or inside the project root) is some other failure and is left alone.
 export function sandboxDeniedWrite(output: string, projectRoot: string): string | undefined {
-	if (!output.includes("Operation not permitted")) return undefined;
+	if (!/operation not permitted/iu.test(output)) return undefined;
 	for (const match of output.matchAll(/(?:^|[\s'"(\[=])(\/[^\s'"()\[\];,:<>|&]+)/gu)) {
 		const target = match[1];
 		if (target === undefined) continue;
@@ -200,34 +208,19 @@ export function sandboxDeniedWrite(output: string, projectRoot: string): string 
 	return undefined;
 }
 
+export function isSandboxDenial(output: string, projectRoot: string): boolean {
+	if (!/operation not permitted/iu.test(output)) return false;
+	return sandboxDeniedWrite(output, projectRoot) !== undefined || /(?:connect(?:\(2\))?|dial (?:tcp|udp)|socket)/iu.test(output);
+}
+
 export function classifyToolCall(opts: ClassifyToolInput): TierDecision {
 	const sandboxState = getSandboxState(opts.platform, opts.sandboxEnabled);
 
-	if (TIER_BYPASS_TOOLS.has(opts.toolName)) {
+	if (TIER_BYPASS_TOOLS.has(opts.toolName) || READ_TOOLS.has(opts.toolName)) {
 		return { kind: "bypass", reason: "read-only-tool", sandboxState };
 	}
 
-	if (opts.toolName === "bash") {
-		if (sandboxState === "in-sandbox") {
-			return { kind: "bypass", reason: "in-sandbox", sandboxState };
-		}
-		return { kind: "classify", sandboxState };
-	}
-
-	if (opts.toolName === "powershell") {
-		// Powershell goes through the classifier (same prompt) but is never
-		// sandbox-bypassed: there is no spawnHook for it on this Pi version.
-		return { kind: "classify", sandboxState };
-	}
-
-	if (opts.toolName === "edit" || opts.toolName === "write") {
-		const targetPath = extractTargetPath(opts.input);
-		if (targetPath === undefined) return { kind: "classify", sandboxState };
-		return isInProject(targetPath, opts.projectRoot) &&
-			!isInProject(targetPath, path.join(opts.projectRoot, ".git"))
-			? { kind: "bypass", reason: "in-project", sandboxState }
-			: { kind: "classify", sandboxState };
-	}
-
+	// edit/write remain unsandboxed by choice. Classify every call: a pathname
+	// precheck is not containment and can be invalidated by a symlink swap.
 	return { kind: "classify", sandboxState };
 }

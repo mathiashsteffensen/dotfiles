@@ -11,6 +11,7 @@ import {
 	classifySubject,
 	classifyToolCall,
 	isSafeVerdict,
+	isSandboxDenial,
 	sandboxDeniedWrite,
 	userIntentBlock,
 } from "./tiers.ts";
@@ -142,25 +143,40 @@ test("is empty when the branch holds no user message", () => {
 	);
 });
 
-test("in-project edits bypass classification except for .git", { skip: needsCheckout }, () => {
-	const root = repoRoot();
-	for (const toolName of ["edit", "write"]) {
-		const classify = (path: string) => classifyToolCall({
-			toolName,
-			input: { path },
-			platform: "darwin",
-			sandboxEnabled: true,
-			projectRoot: root,
-		});
-		assert.equal(classify(join(root, "README.md")).kind, "bypass");
-		assert.equal(classify(join(root, ".git", "config")).kind, "classify");
+test("only reads, navigation and questions bypass classification on every platform", () => {
+	for (const platform of ["darwin", "linux", "win32"] as const) {
+		for (const sandboxEnabled of [true, false]) {
+			const classify = (toolName: string) => classifyToolCall({ toolName, platform, sandboxEnabled });
+			for (const toolName of ["read", "grep", "find", "ls", "ask_user_question"]) {
+				assert.equal(classify(toolName).kind, "bypass", toolName);
+			}
+			for (const toolName of ["bash", "powershell", "edit", "write", "custom-tool"]) {
+				assert.equal(classify(toolName).kind, "classify", toolName);
+			}
+		}
 	}
 });
 
-test("classifySubject hands the classifier the command, the write target, or a bounded summary", () => {
+test("only sandbox denials qualify for escalation", { skip: needsCheckout }, () => {
+	const root = repoRoot();
+	assert.equal(isSandboxDenial("Command exited with code 1", root), false);
+	assert.equal(
+		isSandboxDenial(`fatal: '${join(root, ".git", "index.lock")}': Operation not permitted`, root),
+		true,
+	);
+	assert.equal(isSandboxDenial("dial tcp [::1]:5432: operation not permitted", root), true);
+});
+
+test("classifySubject hands the classifier the command, complete mutation, or bounded summary", () => {
 	assert.equal(classifySubject("bash", { command: "git status" }), "git status");
 	assert.equal(classifySubject("powershell", { command: "Get-Process" }), "Get-Process");
-	assert.equal(classifySubject("write", { path: "/etc/hosts", content: "x" }), "write /etc/hosts");
+	for (const [tool, input] of [
+		["write", { path: "/etc/hosts", content: "x\ny" }],
+		["edit", { path: "test.ts", oldText: "old", newText: "new" }],
+		["edit", { path: "test.ts", edits: [{ oldText: "old", newText: "new" }] }],
+	] as const) {
+		assert.equal(classifySubject(tool, input), `${tool} ${input.path}\nArguments: ${JSON.stringify(input)}`);
+	}
 	// Malformed calls must block rather than classify an empty string.
 	assert.equal(classifySubject("bash", {}), undefined);
 	assert.equal(classifySubject("bash", { command: "" }), undefined);

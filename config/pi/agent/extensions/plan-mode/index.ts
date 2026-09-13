@@ -2,7 +2,7 @@
  * Plan Mode Extension
  *
  * Read-only exploration mode for safe code analysis.
- * When enabled, Bash and built-in write tools are disabled.
+ * When enabled, only explicitly allowed, already-active read-only tools remain.
  *
  * Features:
  * - /plan command or Ctrl+Alt+P to toggle
@@ -21,13 +21,8 @@ import {
 	getPlanModeTools,
 	isPlanModeBlockedTool,
 	markCompletedSteps,
-	PLAN_MODE_TOOLS,
 	type TodoItem,
 } from "./utils.ts";
-
-// Tools
-const NORMAL_MODE_TOOLS = ["read", "bash", "edit", "write"];
-const PLAN_MANAGED_TOOLS = new Set<string>([...PLAN_MODE_TOOLS, ...NORMAL_MODE_TOOLS]);
 
 interface PlanModeState {
 	enabled: boolean;
@@ -88,17 +83,6 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 		}
 	}
 
-	function uniqueToolNames(toolNames: string[]): string[] {
-		return [...new Set(toolNames)];
-	}
-
-	function getNormalModeTools(activeToolNames: string[]): string[] {
-		return uniqueToolNames([
-			...NORMAL_MODE_TOOLS,
-			...activeToolNames.filter((name) => !PLAN_MANAGED_TOOLS.has(name)),
-		]);
-	}
-
 	function enablePlanModeTools(): void {
 		if (toolsBeforePlanMode === undefined) {
 			toolsBeforePlanMode = pi.getActiveTools();
@@ -107,7 +91,7 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 	}
 
 	function restoreNormalModeTools(): void {
-		pi.setActiveTools(toolsBeforePlanMode ?? getNormalModeTools(pi.getActiveTools()));
+		if (toolsBeforePlanMode !== undefined) pi.setActiveTools(toolsBeforePlanMode);
 		toolsBeforePlanMode = undefined;
 	}
 
@@ -127,7 +111,7 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 
 		if (planModeEnabled) {
 			enablePlanModeTools();
-			ctx.ui.notify("Plan mode enabled. Bash and built-in write tools disabled.");
+			ctx.ui.notify("Plan mode enabled. Only active read-only tools and questions are available.");
 		} else {
 			restoreNormalModeTools();
 			ctx.ui.notify("Plan mode disabled. Full access restored.");
@@ -173,22 +157,9 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 		if (planModeEnabled) return;
 
 		return {
-			messages: event.messages.filter((m) => {
-				const msg = m as AgentMessage & { customType?: string };
-				if (msg.customType === "plan-mode-context") return false;
-				if (msg.role !== "user") return true;
-
-				const content = msg.content;
-				if (typeof content === "string") {
-					return !content.includes("[PLAN MODE ACTIVE]");
-				}
-				if (Array.isArray(content)) {
-					return !content.some(
-						(c) => c.type === "text" && (c as TextContent).text?.includes("[PLAN MODE ACTIVE]"),
-					);
-				}
-				return true;
-			}),
+			messages: event.messages.filter((message) =>
+				(message as AgentMessage & { customType?: string }).customType !== "plan-mode-context",
+			),
 		};
 	});
 
@@ -202,8 +173,8 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 You are in plan mode - a read-only exploration mode for safe code analysis.
 
 Restrictions:
-- Bash and the built-in edit and write tools are disabled
-- Other currently active tools remain available
+- Only already-active read, grep, find, ls, and ask_user_question tools are allowed
+- Shells, writes, subagents, and all other tools are disabled
 
 Ask clarifying questions using the ask_user_question tool.
 Use available read-only tools for code analysis and research.
@@ -292,11 +263,13 @@ After completing a step, include a [DONE:n] tag in your response.`,
 			display: true,
 		};
 
+		const offeredPlan = todoItems;
 		const choice = await ctx.ui.select("Plan mode - what next?", [
 			"Execute the plan (track progress)",
 			"Stay in plan mode",
 			"Refine the plan",
 		]);
+		if (!planModeEnabled || todoItems !== offeredPlan) return;
 
 		if (choice?.startsWith("Execute")) {
 			const firstTodoItem = todoItems[0];
@@ -323,6 +296,7 @@ After completing a step, include a [DONE:n] tag in your response.`;
 			);
 		} else if (choice === "Refine the plan") {
 			const refinement = await ctx.ui.editor("Refine the plan:", "");
+			if (!planModeEnabled || todoItems !== offeredPlan) return;
 			if (refinement?.trim()) {
 				pi.sendMessage(planTodoListMessage, { deliverAs: "followUp" });
 				pi.sendUserMessage(refinement.trim(), { deliverAs: "followUp" });
@@ -330,22 +304,20 @@ After completing a step, include a [DONE:n] tag in your response.`;
 		}
 	});
 
-	// Restore state on session start/resume
-	pi.on("session_start", async (_event, ctx) => {
-		const startInPlanMode = pi.getFlag("plan") === true;
-		const entries = ctx.sessionManager.getEntries();
+	// Undo the previous branch's tool restriction before restoring the active branch.
+	function restoreState(ctx: ExtensionContext, startInPlanMode = false): void {
+		restoreNormalModeTools();
+		const normalTools = pi.getActiveTools();
+		const entries = ctx.sessionManager.getBranch();
 
 		// Restore persisted state
 		const planModeEntry = entries
 			.filter((e: { type: string; customType?: string }) => e.type === "custom" && e.customType === "plan-mode")
 			.pop() as { data?: PlanModeState } | undefined;
 
-		if (planModeEntry?.data) {
-			planModeEnabled = planModeEntry.data.enabled ?? planModeEnabled;
-			todoItems = planModeEntry.data.todos ?? todoItems;
-			executionMode = planModeEntry.data.executing ?? executionMode;
-			toolsBeforePlanMode = planModeEntry.data.toolsBeforePlanMode ?? toolsBeforePlanMode;
-		}
+		planModeEnabled = planModeEntry?.data?.enabled ?? false;
+		todoItems = planModeEntry?.data?.todos?.map((item) => ({ ...item })) ?? [];
+		executionMode = planModeEntry?.data?.executing ?? false;
 
 		if (startInPlanMode) {
 			planModeEnabled = true;
@@ -379,8 +351,13 @@ After completing a step, include a [DONE:n] tag in your response.`;
 		}
 
 		if (planModeEnabled) {
+			const savedTools = planModeEntry?.data?.toolsBeforePlanMode;
+			toolsBeforePlanMode = savedTools ? normalTools.filter((name) => savedTools.includes(name)) : normalTools;
 			enablePlanModeTools();
 		}
 		updateStatus(ctx);
-	});
+	}
+
+	pi.on("session_start", (_event, ctx) => restoreState(ctx, pi.getFlag("plan") === true));
+	pi.on("session_tree", (_event, ctx) => restoreState(ctx));
 }

@@ -33,7 +33,7 @@ This repository contains my Bash configuration files and scripts to manage them 
 - `config/pi/agent/extensions/auto-approve/` - Custom auto-approve extension source
 - `config/pi/agent/extensions/usage-display/` - Model-aware Codex subscription and OpenRouter budget usage status
 - `config/pi/agent/extensions/notify.ts` - Terminal notification when an agent settles
-- `config/pi/agent/extensions/plan-mode/` - Read-only planning with Bash and write tools disabled, plus tracked execution
+- `config/pi/agent/extensions/plan-mode/` - Read-only planning with an explicit tool allowlist, plus tracked execution
 - `config/pi/agent/extensions/pi-openai-fast-mode/` - Priority-service configuration for supported OpenAI models
 - `config/pi/agent/extensions/ui-review/` - `/ux-review`, reusable manual login state, browser screenshots, and automated axe accessibility audits
 
@@ -76,10 +76,10 @@ sleep 3; printf '\033]777;notify;Ghostty Test;OSC 777 is working\007'
 
 This configuration includes custom extensions to:
 * Ask structured clarification questions with selectable options, free-text answers, and working multi-select support
-* Run an auto-approve LLM model on all agent commands to determine whether the risk factor requires human review
+* Classify Bash and every edit/write call with an auto-approve LLM; reading, searching, and listing files never prompt
 * Display weekly Codex subscription usage or OpenRouter budget usage for the selected provider, refreshing every minute and when the agent settles
 * Send a terminal notification when an agent is ready for input
-* Provide read-only plan mode with Bash and write tools disabled, plus tracked execution progress
+* Provide read-only plan mode limited to already-active `read`, `grep`, `find`, `ls`, and `ask_user_question` tools; shells, subagents, and other tools are blocked
 * Enable priority service tiers for supported OpenAI models
 * Review rendered web UIs with screenshots and automated axe accessibility audits
 * Apply Ponytail’s minimal-code guidance and provide its six skills/commands

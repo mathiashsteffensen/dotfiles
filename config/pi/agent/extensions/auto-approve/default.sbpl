@@ -14,17 +14,16 @@
 (allow file-read*)
 (allow file-read-metadata)
 
-; Allow writes only to the project root (cwd at extension load). <PROJECT_ROOT>
-; is substituted at runtime by sandbox.ts via a function replacer (avoids $-interpret
-; bugs from project roots containing `$&`, `$1`, etc.).
+; sandbox.ts converts these quoted markers to SBPL parameters before execution.
+; Project paths are passed separately as data, never interpolated into policy.
 (allow file-write* (subpath "<PROJECT_ROOT>"))
 
 ; `file-write*` covers `file-write-unlink`, so `rm -rf .git` would otherwise be
 ; allowed. Block it explicitly — the agent's recovery path is the git history.
 (deny file-write* (subpath "<PROJECT_ROOT>/.git"))
 
-; Deny all network access.
-(deny network*)
+; Allow specs to reach local Postgres; deny-default blocks all other network access.
+(allow network-outbound (remote tcp "localhost:5432"))
 
 ; --- Runtime baseline -------------------------------------------------------
 ; Without these, ordinary tools fail in confusing ways instead of being

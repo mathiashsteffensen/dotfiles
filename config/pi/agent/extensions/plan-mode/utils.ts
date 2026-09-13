@@ -4,19 +4,12 @@
  */
 
 export const PLAN_MODE_TOOLS = ["read", "grep", "find", "ls", "ask_user_question"];
-const PLAN_MODE_DISABLED_TOOLS = new Set<string>(["bash", "edit", "write"]);
-
 export function isPlanModeBlockedTool(toolName: string): boolean {
-	return PLAN_MODE_DISABLED_TOOLS.has(toolName);
+	return !PLAN_MODE_TOOLS.includes(toolName);
 }
 
 export function getPlanModeTools(activeToolNames: string[]): string[] {
-	return [
-		...new Set([
-			...activeToolNames.filter((name) => !isPlanModeBlockedTool(name)),
-			...PLAN_MODE_TOOLS,
-		]),
-	];
+	return activeToolNames.filter((name) => !isPlanModeBlockedTool(name));
 }
 
 export interface TodoItem {

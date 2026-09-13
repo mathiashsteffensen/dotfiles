@@ -3,21 +3,14 @@ import test from "node:test";
 import { getPlanModeTools, isPlanModeBlockedTool } from "./utils.ts";
 
 test("plan mode blocks stale mutation-tool calls from in-flight turns", () => {
-	for (const toolName of ["bash", "edit", "write"]) {
+	for (const toolName of ["bash", "powershell", "edit", "write", "subagent", "custom-tool"]) {
 		assert.equal(isPlanModeBlockedTool(toolName), true, toolName);
 	}
 	assert.equal(isPlanModeBlockedTool("read"), false);
 });
 
-test("plan mode disables Bash and built-in write tools", () => {
-	const tools = getPlanModeTools(["read", "bash", "edit", "write", "custom-tool"]);
-
-	assert.equal(tools.includes("bash"), false);
-	assert.equal(tools.includes("edit"), false);
-	assert.equal(tools.includes("write"), false);
-	assert.equal(tools.includes("custom-tool"), true);
-	assert.equal(tools.includes("grep"), true);
-	assert.equal(tools.includes("find"), true);
-	assert.equal(tools.includes("ls"), true);
-	assert.equal(tools.includes("ask_user_question"), true);
+test("plan mode keeps only already-active read-only tools", () => {
+	assert.deepEqual(getPlanModeTools(["read", "bash", "edit", "write", "custom-tool", "ask_user_question"]), ["read", "ask_user_question"]);
+	assert.deepEqual(getPlanModeTools(["grep", "find", "ls"]), ["grep", "find", "ls"]);
+	assert.deepEqual(getPlanModeTools([]), []);
 });
