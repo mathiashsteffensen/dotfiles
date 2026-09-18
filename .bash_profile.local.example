@@ -4,3 +4,7 @@
 # if [ -f "$HOME/google-cloud-sdk/path.bash.inc" ]; then
 #     . "$HOME/google-cloud-sdk/path.bash.inc"
 # fi
+
+# Optional: Linear tools for Pi. Create a scoped key at:
+# https://linear.app/settings/account/security
+# export LINEAR_API_KEY="lin_api_..."

@@ -36,6 +36,7 @@ This repository contains my Bash configuration files and scripts to manage them 
 - `config/pi/agent/extensions/plan-mode/` - Read-only planning with an explicit tool allowlist, plus tracked execution
 - `config/pi/agent/extensions/pi-openai-fast-mode/` - Priority-service configuration for supported OpenAI models
 - `config/pi/agent/extensions/ui-review/` - `/ux-review`, reusable manual login state, browser screenshots, and automated axe accessibility audits
+- `config/pi/agent/extensions/linear/` - Linear team and issue tools; requires `LINEAR_API_KEY`
 
 ## Installation
 
@@ -73,6 +74,16 @@ Ghostty notifications require `desktop-notifications = true` (configured here) a
 ```bash
 sleep 3; printf '\033]777;notify;Ghostty Test;OSC 777 is working\007'
 ```
+
+### Linear setup
+
+Run `/linear-login` in an interactive Pi session. It opens [Linear Security & Access](https://linear.app/settings/account/security), prompts for the key, and stores it in macOS Keychain. The key is never stored in this repository. For manual setup, add it to the ignored `.bash_profile.local` file:
+
+```bash
+export LINEAR_API_KEY="lin_api_..."
+```
+
+Reload Pi with `/reload` after installing the extension. It provides Linear team/issue tools; mutating calls are checked by auto-approve instead of using a second confirmation prompt.
 
 This configuration includes custom extensions to:
 * Ask structured clarification questions with selectable options, free-text answers, and working multi-select support

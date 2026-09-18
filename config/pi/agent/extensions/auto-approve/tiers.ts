@@ -148,6 +148,45 @@ export function userIntentBlock(entries: readonly SessionEntry[]): string {
 // path) and the caller blocks it instead of classifying nothing.
 export const CLASSIFY_SUBJECT_JSON_LIMIT = 600;
 
+function serializeInput(value: unknown): string {
+	try {
+		return JSON.stringify(value) ?? String(value);
+	} catch {
+		return String(value);
+	}
+}
+
+function summarizeInput(input: Record<string, unknown>, limit: number): string {
+	const fields = Object.keys(input);
+	let valueLimit = Math.max(1, Math.floor(limit / Math.max(fields.length, 1)));
+	let summary = "";
+
+	const buildSummary = (maxValueLength: number): string => {
+		let truncated = false;
+		const values = fields.map((field) => {
+			const serialized = serializeInput(input[field]);
+			if (serialized.length <= maxValueLength) {
+				try {
+					return JSON.parse(serialized) as unknown;
+				} catch {
+					return serialized;
+				}
+			}
+			truncated = true;
+			return `${serialized.slice(0, Math.max(0, maxValueLength - 1))}…`;
+		});
+		return serializeInput({ fields, values, ...(truncated ? { truncated: true } : {}) });
+	};
+
+	summary = buildSummary(valueLimit);
+	while (summary.length > limit && valueLimit > 0) {
+		valueLimit -= 1;
+		summary = buildSummary(valueLimit);
+	}
+	if (summary.length > limit) summary = serializeInput({ truncated: true });
+	return summary.slice(0, limit);
+}
+
 export function classifySubject(toolName: string, input: unknown): string | undefined {
 	if (toolName === "bash" || toolName === "powershell") {
 		const command = (input as { command?: unknown } | null)?.command;
@@ -157,13 +196,16 @@ export function classifySubject(toolName: string, input: unknown): string | unde
 		const target = extractTargetPath(input);
 		return target === undefined ? undefined : `${toolName} ${target}\nArguments: ${JSON.stringify(input)}`;
 	}
-	let serialized: string;
-	try {
-		serialized = JSON.stringify(input) ?? String(input);
-	} catch {
-		serialized = String(input);
+	const serialized = serializeInput(input);
+	const prefix = `${toolName} `;
+	if (typeof input === "object" && input !== null && !Array.isArray(input)) {
+		const available = CLASSIFY_SUBJECT_JSON_LIMIT;
+		const summary = summarizeInput(input as Record<string, unknown>, available);
+		if (summary.endsWith('"truncated":true}')) return `${prefix}${summary}`;
+		const suffix = serialized.slice(0, Math.max(0, available - summary.length));
+		return `${prefix}${summary}${suffix}`;
 	}
-	return `${toolName} ${serialized.slice(0, CLASSIFY_SUBJECT_JSON_LIMIT)}`;
+	return `${prefix}${serialized.slice(0, CLASSIFY_SUBJECT_JSON_LIMIT)}`;
 }
 
 // Fail closed. Anything but a clean single-token SAFE on a normal stop — extra
