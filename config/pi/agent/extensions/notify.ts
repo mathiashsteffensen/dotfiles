@@ -1,7 +1,7 @@
 /**
  * Pi Notify Extension
  *
- * Sends a native terminal notification when Pi agent is done and waiting for input.
+ * Sends native terminal notifications when Pi needs input or approval.
  * Supports only OSC 777: Ghostty, iTerm2, WezTerm, rxvt-unicode
  *
  */
@@ -14,6 +14,10 @@ function notifyOSC777(title: string, body: string): void {
 
 function notify(title: string, body: string): void {
 	notifyOSC777(title, body);
+}
+
+export function notifyApproval(): void {
+	notify("Pi", "Approval required");
 }
 
 export default function (pi: ExtensionAPI) {

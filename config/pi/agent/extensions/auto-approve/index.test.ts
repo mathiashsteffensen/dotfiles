@@ -22,16 +22,19 @@ async function harness(verdict = "SAFE", confirmed = false, hasUI = true,
 	let missingExecutable = false;
 	let startupError: string | undefined;
 	const notifications: string[] = [];
+	const approvalNotifications: string[] = [];
+	const eventOrder: string[] = [];
 	let profileLoads = 0;
 	const resolvedProfiles: string[] = [];
 	const ctx = {
-		cwd: process.cwd(), hasUI, signal: undefined as AbortSignal | undefined,
+		cwd: process.cwd(), mode: "tui" as const, hasUI, signal: undefined as AbortSignal | undefined,
 		ui: {
 			notify: (message: string) => notifications.push(message),
 			setStatus: () => {},
 			theme: { fg: (_color: string, text: string) => text },
 			confirm: async (_title: string, body: string, _options?: { signal?: AbortSignal }) => {
 				calls.push("prompt");
+				eventOrder.push("prompt");
 				assert.ok(body.length > 0);
 				return confirmed;
 			},
@@ -41,6 +44,7 @@ async function harness(verdict = "SAFE", confirmed = false, hasUI = true,
 			find: () => ({ id: "test" }),
 			complete: async (_model: unknown, _request: unknown, _options: { signal?: AbortSignal }) => {
 				calls.push("classify");
+				eventOrder.push("classify");
 				if (verdict === "error") throw new Error("provider failed");
 				return { stopReason: "stop", content: [{ type: "text", text: verdict }] };
 			},
@@ -72,6 +76,7 @@ async function harness(verdict = "SAFE", confirmed = false, hasUI = true,
 			},
 		},
 		"./tiers.ts": tiers,
+		"../notify.ts": { notifyApproval: () => { approvalNotifications.push("approval"); eventOrder.push("approval"); } },
 		"@earendil-works/pi-coding-agent": {
 			getAgentDir: () => "/tmp/auto-approve-test",
 			createBashToolDefinition: (_cwd: string, options?: any) => ({
@@ -112,7 +117,7 @@ async function harness(verdict = "SAFE", confirmed = false, hasUI = true,
 	});
 	const run = (escalate = false, command = "git status", signal?: AbortSignal) => tool.execute("id", { command, escalate }, signal, undefined, ctx);
 	return {
-		calls, ctx, hooks, run, notifications, resolvedProfiles,
+		calls, ctx, hooks, run, notifications, approvalNotifications, eventOrder, resolvedProfiles,
 		profileLoads: () => profileLoads,
 		setProfile: (text: string) => { profileText = text; },
 		failRetry: () => { failRetry = true; },
@@ -170,6 +175,13 @@ test("every edit/write is classified and unsafe verdicts reach the user", async 
 			assert.deepEqual(h.calls, ["classify", "prompt"]);
 		}
 	}
+});
+
+test("unsafe approval notifies before opening the prompt", async () => {
+	const h = await harness("UNSAFE", true);
+	assert.equal(await h.hooks.get("tool_call")!({ toolName: "write", input: { path: "README.md" } }, h.ctx), undefined);
+	assert.deepEqual(h.approvalNotifications, ["approval"]);
+	assert.deepEqual(h.eventOrder, ["classify", "approval", "prompt"]);
 });
 
 test("invalid or unreadable configuration blocks bash rather than disabling its sandbox", async () => {

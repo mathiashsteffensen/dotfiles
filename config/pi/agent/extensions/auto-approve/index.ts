@@ -22,6 +22,7 @@ import {
 	userIntentBlock,
 	type BypassReason,
 } from "./tiers.ts";
+import { notifyApproval } from "../notify.ts";
 
 const logFile = path.join(getAgentDir(), "extensions/auto-approve/results.log");
 const rotatedLogFile = `${logFile}.1`;
@@ -69,6 +70,10 @@ function log(entry: LogEntry): void {
 	lines.push(`Response: ${JSON.stringify(entry.response, undefined, "  ")}`, "");
 
 	enqueueLog(lines.join("\n"));
+}
+
+function notifyApprovalPrompt(ctx: Pick<ExtensionContext, "hasUI" | "mode">): void {
+	if (ctx.hasUI && ctx.mode === "tui") notifyApproval();
 }
 
 let sandboxExecutableAvailable: boolean | undefined;
@@ -354,6 +359,7 @@ export default function (pi: ExtensionAPI) {
 			}, signal);
 			signal?.throwIfAborted();
 			const autoApproved = safe && (denied === undefined || isInProject(denied, projectRootFor(ctx.cwd)));
+			if (!autoApproved) notifyApprovalPrompt(ctx);
 			const approved = autoApproved || (ctx.hasUI && await ctx.ui.confirm(
 				"🔒 Run this command outside the sandbox?",
 				[
@@ -500,6 +506,7 @@ export default function (pi: ExtensionAPI) {
 				};
 			}
 
+			notifyApprovalPrompt(ctx);
 			const confirmed = await ctx.ui.confirm(
 				`⚠️ Auto-Approve AI flagged this tool call as unsafe:`,
 				`Tool call: ${subject}\n\nDo you want to proceed?`,
