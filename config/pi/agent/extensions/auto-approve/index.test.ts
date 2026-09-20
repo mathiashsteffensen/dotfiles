@@ -141,6 +141,36 @@ test("reads and navigation never classify or prompt, regardless of path or model
 	}
 });
 
+test("cached research and memory reads never classify or prompt even when the model fails", async () => {
+	const h = await harness("error", false, false);
+	for (const toolName of ["get_search_content", "memory_search", "memory_get"]) {
+		assert.equal(await h.hooks.get("tool_call")!({ toolName, input: { query: "documentation" } }, h.ctx), undefined);
+	}
+	assert.deepEqual(h.calls, []);
+});
+
+test("research gets complete arguments and explicit routine authorization, but still checks for leakage", async () => {
+	for (const toolName of ["web_search", "source_check", "fetch_content"]) {
+		const input = { queries: ["public API documentation ".repeat(50)], url: "https://example.com/docs" };
+		for (const verdict of ["SAFE", "UNSAFE", "error"]) {
+			const h = await harness(verdict);
+			let request: any;
+			const complete = h.ctx.modelRegistry.complete;
+			h.ctx.modelRegistry.complete = async (...args) => {
+				request = args[1];
+				return complete(...args);
+			};
+			const result = await h.hooks.get("tool_call")!({ toolName, input }, h.ctx);
+			assert.ok(request.messages[0].content.includes(`${toolName} ${JSON.stringify(input)}`));
+			assert.match(request.systemPrompt, /Answer SAFE for ordinary web searches/);
+			assert.match(request.systemPrompt, /secrets or private file contents/);
+			assert.doesNotMatch(request.systemPrompt, /truncated/);
+			assert.equal(result?.block, verdict === "SAFE" ? undefined : true);
+			assert.deepEqual(h.calls, verdict === "SAFE" ? ["classify"] : ["classify", "prompt"]);
+		}
+	}
+});
+
 test("routine edits include their changes and project root, and SAFE never prompts", async () => {
 	const inputs = [
 		{ toolName: "edit", input: { path: "test/example.ts", edits: [{ oldText: "assert.equal(sum(1, 2), 4)", newText: "assert.equal(sum(1, 2), 3)" }] } },

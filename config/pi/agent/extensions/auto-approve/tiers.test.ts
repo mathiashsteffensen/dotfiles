@@ -6,7 +6,6 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import type { SessionEntry } from "@earendil-works/pi-coding-agent";
 import {
-	CLASSIFY_SUBJECT_JSON_LIMIT,
 	USER_CONTEXT_CHAR_BUDGET,
 	classifySubject,
 	classifyToolCall,
@@ -143,14 +142,14 @@ test("is empty when the branch holds no user message", () => {
 	);
 });
 
-test("only reads, navigation and questions bypass classification on every platform", () => {
+test("only local reads, cached research, memory and questions bypass classification on every platform", () => {
 	for (const platform of ["darwin", "linux", "win32"] as const) {
 		for (const sandboxEnabled of [true, false]) {
 			const classify = (toolName: string) => classifyToolCall({ toolName, platform, sandboxEnabled });
-			for (const toolName of ["read", "grep", "find", "ls", "ask_user_question"]) {
+			for (const toolName of ["read", "grep", "find", "ls", "get_search_content", "memory_search", "memory_get", "ask_user_question"]) {
 				assert.equal(classify(toolName).kind, "bypass", toolName);
 			}
-			for (const toolName of ["bash", "powershell", "edit", "write", "custom-tool"]) {
+			for (const toolName of ["bash", "powershell", "edit", "write", "web_search", "source_check", "fetch_content", "ui_capture", "ui_audit", "linear_update_issue", "custom-tool"]) {
 				assert.equal(classify(toolName).kind, "classify", toolName);
 			}
 		}
@@ -167,7 +166,7 @@ test("only sandbox denials qualify for escalation", { skip: needsCheckout }, () 
 	assert.equal(isSandboxDenial("dial tcp [::1]:5432: operation not permitted", root), true);
 });
 
-test("classifySubject hands the classifier the command, complete mutation, or bounded summary", () => {
+test("classifySubject hands the classifier complete arguments without lossy summaries", () => {
 	assert.equal(classifySubject("bash", { command: "git status" }), "git status");
 	assert.equal(classifySubject("powershell", { command: "Get-Process" }), "Get-Process");
 	for (const [tool, input] of [
@@ -181,10 +180,10 @@ test("classifySubject hands the classifier the command, complete mutation, or bo
 	assert.equal(classifySubject("bash", {}), undefined);
 	assert.equal(classifySubject("bash", { command: "" }), undefined);
 	assert.equal(classifySubject("edit", { oldText: "a" }), undefined);
-	assert.equal(
-		classifySubject("mcp-thing", { a: "y".repeat(900) })?.length,
-		"mcp-thing ".length + CLASSIFY_SUBJECT_JSON_LIMIT,
-	);
+	for (const tool of ["web_search", "source_check", "fetch_content", "linear_update_issue", "custom-tool"]) {
+		const input = { description: "x".repeat(5000), destination: "https://example.com", body: "must remain visible" };
+		assert.equal(classifySubject(tool, input), `${tool} ${JSON.stringify(input)}`);
+	}
 });
 
 test("isSafeVerdict fails closed on anything but a clean SAFE", () => {

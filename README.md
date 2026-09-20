@@ -87,7 +87,7 @@ Reload Pi with `/reload` after installing the extension. It provides Linear team
 
 This configuration includes custom extensions to:
 * Ask structured clarification questions with selectable options, free-text answers, and working multi-select support
-* Classify Bash and every edit/write call with an auto-approve LLM; reading, searching, and listing files never prompt
+* Classify Bash, edits/writes, and outbound research with an auto-approve LLM using complete arguments; routine research is implicitly authorized, while secret leakage and remote mutations remain checked. Local reads, cached search results, and memory reads never prompt
 * Display weekly Codex subscription usage or OpenRouter budget usage for the selected provider, refreshing every minute and when the agent settles
 * Send a terminal notification when an agent is ready for input
 * Provide read-only plan mode limited to already-active `read`, `grep`, `find`, `ls`, and `ask_user_question` tools; shells, subagents, and other tools are blocked
