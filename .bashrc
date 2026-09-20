@@ -3,6 +3,8 @@ export CLICOLOR=1
 export LSCOLORS=ExFxBxDxCxegedabagacad
 export OPENCODE_ENABLE_EXA=1
 
+[ "$TERM" = xterm-ghostty ] && export TERM=xterm-256color
+
 # Load custom helper functions if they exist
 if [ -f ~/.bash_functions ]; then
     . ~/.bash_functions
