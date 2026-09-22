@@ -138,8 +138,8 @@ export default function (pi: ExtensionAPI) {
 	let sessionGeneration = 0;
 	let activeRefreshController: AbortController | undefined;
 
-	const setStatus = (ctx: ExtensionContext, text: string, color: "dim" | "success" | "warning" | "error" = "dim") => {
-		ctx.ui.setStatus("usage-display", ctx.ui.theme.fg(color, text));
+	const setStatus = (ctx: ExtensionContext, text: string) => {
+		ctx.ui.setStatus("usage-display", ctx.ui.theme.fg("accent", `· ${text}`));
 	};
 
 	const refresh = async (ctx: ExtensionContext) => {
@@ -176,11 +176,9 @@ export default function (pi: ExtensionAPI) {
 				if (!usage) throw new Error("OpenRouter usage or budget configuration is unavailable");
 				const { percent, used, limit, period } = usage;
 				const periodLabel = period[0].toUpperCase() + period.slice(1);
-				const color = percent >= 90 ? "error" : percent >= 75 ? "warning" : "success";
 				setStatus(
 					ctx,
 					`OpenRouter ${periodLabel} Usage: ${percent % 1 === 0 ? percent : percent.toFixed(1)}% used ($${used.toFixed(2)} / $${limit.toFixed(2)})`,
-					color,
 				);
 				return;
 			}
@@ -196,11 +194,9 @@ export default function (pi: ExtensionAPI) {
 
 			const resetAt = getWeeklyUsageResetAt(payload);
 			const resetDate = resetAt === undefined ? "unknown" : formatResetDate(resetAt);
-			const color = percent >= 90 ? "error" : percent >= 75 ? "warning" : "success";
 			setStatus(
 				ctx,
 				`Codex Weekly Usage: ${percent % 1 === 0 ? percent : percent.toFixed(1)}% used - resets ${resetDate}`,
-				color,
 			);
 		} catch {
 			if (isActive()) setStatus(ctx, `${label}: unavailable`);

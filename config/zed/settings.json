@@ -41,10 +41,10 @@
   },
   "base_keymap": "JetBrains",
   "terminal": {
-    "font_size": 11.0,
+    "font_size": 13.0,
   },
-  "ui_font_size": 11.0,
-  "buffer_font_size": 11.0,
+  "ui_font_size": 14.0,
+  "buffer_font_size": 14.0,
   "theme": {
     "mode": "dark",
     "light": "Ayu Mirage",
