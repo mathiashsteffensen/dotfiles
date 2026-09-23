@@ -33,7 +33,8 @@ This repository contains my Bash configuration files and scripts to manage them 
 - `config/pi/agent/extensions/auto-approve/` - Custom auto-approve extension source
 - `config/pi/agent/extensions/usage-display/` - Model-aware Codex subscription and OpenRouter budget usage status
 - `config/pi/agent/extensions/notify.ts` - Terminal notification when an agent settles
-- `config/pi/agent/extensions/plan-mode/` - Read-only planning with an explicit tool allowlist, plus tracked execution
+- `config/pi/agent/extensions/plan-mode/` - Read-only planning with trusted exploration tools and tracked execution
+- `config/pi/agent/extensions/subagent/` - Local fresh-context delegation and live split-pane dashboard
 - `config/pi/agent/extensions/openai-priority.ts` - Always request priority service for OpenAI Codex models and show a Fast mode footer indicator
 - `config/pi/agent/extensions/ui-review/` - `/ux-review`, reusable manual login state, browser screenshots, and automated axe accessibility audits
 - `config/pi/agent/extensions/linear/` - Linear team and issue tools; requires `LINEAR_API_KEY`
@@ -87,10 +88,11 @@ Reload Pi with `/reload` after installing the extension. It provides Linear team
 
 This configuration includes custom extensions to:
 * Ask structured clarification questions with selectable options, free-text answers, and working multi-select support
-* Classify Bash, edits/writes, and outbound research with an auto-approve LLM using complete arguments; routine research is implicitly authorized, while secret leakage and remote mutations remain checked. Local reads, cached search results, and memory reads never prompt
+* Classify Bash, sensitive/out-of-project edits and writes, and outbound research with an auto-approve LLM using complete arguments. Ordinary in-project edits/writes and local reads bypass classification; the edit/write path check is not OS containment. Routine research is implicitly authorized, while secret leakage and remote mutations remain checked
 * Display weekly Codex subscription usage or OpenRouter budget usage for the selected provider, refreshing every minute and when the agent settles
 * Send a terminal notification when an agent is ready for input
-* Provide read-only plan mode limited to already-active `read`, `grep`, `find`, `ls`, and `ask_user_question` tools; shells, subagents, and other tools are blocked
+* Provide plan mode with trusted built-in read/navigation tools, structured questions in the TUI, and Bash under auto-approve's read-only, network-denied macOS sandbox. Writes, subagents, and Bash escalation are blocked while planning; execution requires reviewing and confirming the full plan (immediately or later with `/plan execute`). This protects agent tool calls, not user-initiated shell commands or sensitive reads
+* Run up to three fresh-context local Pi children with `subagent({ action: "run", agent, task })` or a `tasks` array. Roles: scout, reviewer, oracle, worker (requires `editBoundary`; one writer per working directory). Use `background: true` to continue working, `action: "status"`/`"stop"` to inspect/control runs, and `/subagents` or Ctrl+Alt+F for the live split-pane dashboard. The persistent status lists active roles; panes show bounded tool-call arguments. Children load only the local auto-approve extension; calls requiring human confirmation are denied in headless children. Runs are session-scoped with a 30-minute timeout and are stopped on orderly shutdown; a parent crash can leave a child running. The worker edit boundary is an instruction, not an OS-enforced restriction
 * Request priority service for all OpenAI Codex models (no model list or toggle)
 * Review rendered web UIs with screenshots and automated axe accessibility audits
 * Apply Ponytail’s minimal-code guidance and provide its six skills/commands

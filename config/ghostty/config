@@ -8,6 +8,7 @@ keybind = cmd+arrow_right=new_split:right
 keybind = cmd+arrow_left=new_split:left
 keybind = cmd+e=equalize_splits
 keybind = cmd+f=toggle_split_zoom
+keybind = cmd+shift+f=start_search
 keybind = cmd+ctrl+arrow_down=resize_split:down,25
 keybind = cmd+ctrl+arrow_left=resize_split:left,25
 keybind = cmd+ctrl+arrow_right=resize_split:right,25

@@ -3,8 +3,7 @@
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-6-sol",
   "packages": [
-    "npm:pi-web-access",
-    "npm:pi-subagents@0.64.0"
+    "npm:pi-web-access"
   ],
   "defaultThinkingLevel": "medium",
   "tuiMode": "fullscreen",
