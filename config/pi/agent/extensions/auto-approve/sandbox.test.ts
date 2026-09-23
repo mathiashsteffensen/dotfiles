@@ -9,6 +9,7 @@ import { getSandboxState, loadSbpl, resolveSandbox, sandboxArgs, wrapWithSandbox
 
 const extensionDir = fileURLToPath(new URL(".", import.meta.url));
 const profile = loadSbpl(extensionDir);
+const planProfile = loadSbpl(extensionDir, "plan.sbpl");
 
 // Require actual Seatbelt execution when running this suite from a normal
 // terminal; inside Pi's enclosing sandbox the native tests must be skipped.
@@ -32,6 +33,14 @@ test("default profile keeps deny rules and passes filesystem paths as parameters
 	assert.ok(profile.includes('(deny file-write* (subpath (param "PROJECT_GIT")))'));
 	assert.doesNotMatch(profile, /"<PROJECT_ROOT>/u);
 	assert.doesNotMatch(profile, /\.pi\/agent/u);
+});
+
+test("planning profile denies writes and all network while preserving read and process access", () => {
+	assert.match(planProfile, /\(deny default\)/);
+	assert.match(planProfile, /\(allow file-read\*\)/);
+	assert.match(planProfile, /\(allow process-exec\)/);
+	assert.doesNotMatch(planProfile, /\(allow (?:file-write\* \(subpath|network-outbound)/);
+	assert.ok(planProfile.includes('(literal "/dev/stdout")'));
 });
 
 test("sandbox state respects explicit disable and unsupported platforms", () => {
@@ -90,6 +99,19 @@ test("sandbox-exec contains shell metacharacters and treats hostile project root
 	} finally {
 		rmSync(sandboxDir, { recursive: true, force: true });
 		rmSync(escapeCheck, { force: true });
+	}
+});
+
+test("real planning profile reads and prints but cannot write to project or temp", { skip: seatbeltSkip() }, () => {
+	const projectRoot = mkdtempSync(join(tmpdir(), "pi-plan-sandbox-"));
+	try {
+		const run = (command: string) => execFileSync("/bin/bash", ["-c", wrapWithSandbox(command, planProfile, projectRoot)], { cwd: projectRoot, encoding: "utf8" });
+		assert.equal(run("pwd").trim(), projectRoot);
+		assert.throws(() => run("touch ./not-allowed"));
+		assert.equal(existsSync(join(projectRoot, "not-allowed")), false);
+		assert.throws(() => run(`touch /tmp/pi-plan-not-allowed-${process.pid}`));
+	} finally {
+		rmSync(projectRoot, { recursive: true, force: true });
 	}
 });
 

@@ -5,10 +5,10 @@ export type SandboxState = "in-sandbox" | "out-of-sandbox" | "sandbox-disabled";
 
 export const SBPL_PROFILE_FILENAME = "default.sbpl";
 
-export function loadSbpl(extensionDir: string): string {
+export function loadSbpl(extensionDir: string, filename = SBPL_PROFILE_FILENAME): string {
 	// Convert template markers to parameters, never interpolate filesystem paths
 	// into executable policy source. Keep the template readable by older installs.
-	return readFileSync(join(extensionDir, SBPL_PROFILE_FILENAME), "utf8")
+	return readFileSync(join(extensionDir, filename), "utf8")
 		.replaceAll('"<PROJECT_ROOT>/.git"', '(param "PROJECT_GIT")')
 		.replaceAll('"<PROJECT_ROOT>"', '(param "PROJECT_ROOT")');
 }

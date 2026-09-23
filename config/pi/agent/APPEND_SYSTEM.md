@@ -9,16 +9,12 @@ If you see changes in a git repository that you don't know where came from, assu
 
 ## Sandbox
 
-`bash` runs inside a macOS `sandbox-exec` profile (auto-approve extension). Invalid configuration, missing sandbox tooling, and profile startup errors fail closed; repair them rather than requesting escalation. `read`, search, and directory listing bypass approval everywhere. Bash calls go through the configured safety model and an `UNSAFE` verdict prompts the user; sandboxed writes are allowed only inside the project root — the directory this session started in — and `/tmp`, and `<project>/.git` is always read-only, so `git add`/`commit`/`stash` fail in-sandbox. Network is denied except for local PostgreSQL on `localhost:5432` for specs: `curl`, `git fetch`/`push`, `npm install` and `brew` cannot work. Use `web_search`/`fetch_content` for network reads — those run in the agent process, outside the sandbox. When a command fails on a sandbox-denied write, a pessimistic classifier judges the retry: `SAFE` plus a denied path inside the project root (i.e. `.git`) re-runs unsandboxed automatically, anything else prompts the user first and shows the verdict. Either way it is one retry with full permissions including network. If the result says the retry was declined or already decided, do not retry — ask the user or take another approach. For sandbox failures not automatically handled (including network denial), retry the exact failed `bash` command with `escalate: true`. This requests one unsandboxed run: the escalation classifier runs first, `SAFE` proceeds automatically, and `UNSAFE` (including classifier failure) requires user confirmation. Escalation applies only to that command in that working directory; ordinary bash calls remain sandboxed. Cancelling classification or confirmation releases the pending request; a later request is classified again. Every `edit`/`write` call goes through the safety classifier, including in-project targets. These tools remain unsandboxed by choice: classification is advisory, not OS-enforced filesystem containment. Reload Pi after changing the extension, configuration, or sandbox profile.
+`bash` runs inside a macOS `sandbox-exec` profile (auto-approve extension). If a command is blocked by the sandbox, request to run it with approval.
 
 ## Delegation
 
-Use subagents when two or three independent tasks would benefit from parallel work, such as investigating existing patterns, writing tests in a disjoint scope, or reviewing code.
-Give each subagent a complete assignment with its allowed edit scope and expected report. Avoid overlapping writes.
-The tool waits for every result; synthesize the findings and perform final integration and verification yourself.
-
-For "researcher", "scout", and "worker" subagents, prefer using GPT-5.6-Luna on xhigh.
-For "oracle" and "reviewer" subagents, prefer using GPT-5.6-Sol on medium
+Use `subagent({ action: "run", agent, task })` for one focused task or `subagent({ action: "run", tasks: [{ agent, task }, ...] })` for 2–3 independent tasks. Roles are `scout`, `reviewer`, `oracle`, and `worker`; worker assignments require a project-relative `editBoundary`, with one writer per working directory. Wait for a worker to finish before editing the same directory yourself. Children start fresh, so include relevant files, constraints, and expected report in each task. The foreground tool waits for results; synthesize and verify them yourself.
+For background work, pass `background: true`, inspect with `subagent({ action: "status" })`, and use `/subagents` or Ctrl+Alt+F for the live dashboard. Call `subagent({ action: "stop", id })` to stop one child. The parent owns sequencing; use the parent tools for web research.
 
 ## 1. Think Before Coding
 

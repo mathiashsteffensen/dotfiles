@@ -1,11 +1,11 @@
-import { realpathSync } from "node:fs";
+import { lstatSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { SessionEntry } from "@earendil-works/pi-coding-agent";
 import { getSandboxState, type SandboxState } from "./sandbox.ts";
 
-export type BypassReason = "read-only-tool";
+export type BypassReason = "read-only-tool" | "routine-project-edit";
 
 export type TierDecision =
 	| { kind: "bypass"; reason: BypassReason; sandboxState: SandboxState }
@@ -14,11 +14,39 @@ export type TierDecision =
 // Local reads never prompt. Outbound research still checks for data leakage.
 export const TIER_BYPASS_TOOLS: ReadonlySet<string> = new Set(["ask_user_question"]);
 const READ_TOOLS: ReadonlySet<string> = new Set([
-	"read", "grep", "find", "ls", "get_search_content", "memory_search", "memory_get",
+	"read", "grep", "find", "ls", "get_search_content", "memory_search", "memory_get", "bg_wait",
 ]);
+
+// Subagent is a mixed read/write tool. Only known inspection actions with
+// their expected arguments bypass the model; launches and management writes
+// still require classification. Do not bypass based on the tool name alone.
+const SUBAGENT_INSPECTION_FIELDS: Readonly<Record<string, readonly string[]>> = {
+	list: ["capabilities"],
+	get: ["agent"],
+	models: [],
+	guide: ["topic"],
+	"children.list": [],
+	status: ["id", "runId", "dir", "view", "lines"],
+	"debug.run": ["id", "runId", "dir"],
+};
+
+function isSupervisorInspection(input: unknown): boolean {
+	if (typeof input !== "object" || input === null || Array.isArray(input)) return false;
+	const args = input as Record<string, unknown>;
+	return typeof args.action === "string" && ["list", "pending", "status"].includes(args.action) &&
+		Object.keys(args).every((key) => key === "action");
+}
+
+function isSubagentInspection(input: unknown): boolean {
+	if (typeof input !== "object" || input === null || Array.isArray(input)) return false;
+	const args = input as Record<string, unknown>;
+	const fields = typeof args.action === "string" ? SUBAGENT_INSPECTION_FIELDS[args.action] : undefined;
+	return fields !== undefined && Object.keys(args).every((key) => key === "action" || fields.includes(key));
+}
 
 export interface ClassifyToolInput {
 	toolName: string;
+	input: unknown;
 	platform: NodeJS.Platform;
 	sandboxEnabled: boolean;
 }
@@ -85,6 +113,40 @@ export function isInProject(target: string, root: string): boolean {
 	}
 	const relative = path.relative(realRoot, realTarget);
 	return !relative.startsWith("..") && !path.isAbsolute(relative);
+}
+
+// Ordinary source edits are explicitly authorized by a request to change this
+// project. Keep the classifier for paths that may carry credentials or modify
+// the approval/plan controls, and for anything outside the project. This is a
+// convenience precheck, not OS containment: edit/write remain unsandboxed.
+export function isRoutineProjectEdit(toolName: string, input: unknown, projectRoot: string): boolean {
+	if (toolName !== "edit" && toolName !== "write") return false;
+	const target = extractTargetPath(input);
+	if (!target || target.startsWith("~") || target.startsWith("@") || target.startsWith("file://")) return false;
+	const args = input as Record<string, unknown>;
+	if (toolName === "write" ? typeof args.content !== "string" :
+		!Array.isArray(args.edits) || args.edits.length === 0 ||
+		!args.edits.every((edit: unknown) => typeof edit === "object" && edit !== null &&
+			typeof (edit as { oldText?: unknown }).oldText === "string" &&
+			typeof (edit as { newText?: unknown }).newText === "string")) return false;
+	if (!isInProject(target, projectRoot)) return false;
+	const resolved = path.resolve(projectRoot, target);
+	const name = path.relative(projectRoot, resolved);
+	if (name === ".." || name.startsWith(`..${path.sep}`) || path.isAbsolute(name)) return false;
+	// A dangling symlink is reported as a missing path by realpathOrAncestor.
+	// Classify all symlinked targets instead of trusting that fallback.
+	for (let current = resolved; current !== projectRoot; current = path.dirname(current)) {
+		try {
+			if (lstatSync(current).isSymbolicLink()) return false;
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code !== "ENOENT") return false;
+		}
+	}
+	if (name.split(path.sep).some((part) => /^(?:\.git|\.ssh|\.aws|\.env(?:\..*)?|\.netrc|\.npmrc|\.(?:bash_profile|bashrc|gitconfig)\.local|id_rsa|id_ed25519|credentials(?:\..*)?|secrets?(?:\..*)?|.*\.(?:pem|key))$/iu.test(part))) return false;
+	return name !== path.join("config", "pi", "agent", "settings.json") &&
+		name !== path.join("config", "pi", "agent", "APPEND_SYSTEM.md") &&
+		!name.startsWith(`config${path.sep}pi${path.sep}agent${path.sep}extensions${path.sep}auto-approve${path.sep}`) &&
+		!name.startsWith(`config${path.sep}pi${path.sep}agent${path.sep}extensions${path.sep}plan-mode${path.sep}`);
 }
 
 // Reasoning isolation: the classifier input is a bounded window of the user's
@@ -218,11 +280,13 @@ export function isSandboxDenial(output: string, projectRoot: string): boolean {
 export function classifyToolCall(opts: ClassifyToolInput): TierDecision {
 	const sandboxState = getSandboxState(opts.platform, opts.sandboxEnabled);
 
-	if (TIER_BYPASS_TOOLS.has(opts.toolName) || READ_TOOLS.has(opts.toolName)) {
+	if (TIER_BYPASS_TOOLS.has(opts.toolName) || READ_TOOLS.has(opts.toolName) ||
+		(opts.toolName === "subagent" && isSubagentInspection(opts.input)) ||
+		(opts.toolName === "subagent_supervisor" && isSupervisorInspection(opts.input))) {
 		return { kind: "bypass", reason: "read-only-tool", sandboxState };
 	}
 
-	// edit/write remain unsandboxed by choice. Classify every call: a pathname
-	// precheck is not containment and can be invalidated by a symlink swap.
+	// edit/write are unsandboxed; the caller bypasses only ordinary project
+	// paths after validating their inputs, and classifies the rest.
 	return { kind: "classify", sandboxState };
 }

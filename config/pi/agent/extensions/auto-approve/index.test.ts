@@ -14,9 +14,9 @@ async function harness(verdict = "SAFE", confirmed = false, hasUI = true,
 	profileText: string | Error = "trusted policy") {
 	const calls: string[] = [];
 	const hooks = new Map<string, Function>();
+	const events = new Map<string, (data: unknown) => void>();
 	let tool: any;
 	let failRetry = false;
-	let maskedNetworkFailure = false;
 	let ordinaryFailure = false;
 	let failSetup = false;
 	let missingExecutable = false;
@@ -64,7 +64,8 @@ async function harness(verdict = "SAFE", confirmed = false, hasUI = true,
 		"typebox": { Type: { Object: (properties: unknown) => ({ properties }), Boolean: () => ({}), Optional: (value: unknown) => value } },
 		"./sandbox.ts": {
 			...sandbox, getSandboxState: () => "in-sandbox",
-			loadSbpl: () => {
+			loadSbpl: (_dir: string, filename?: string) => {
+				if (filename === "plan.sbpl") return "read-only policy";
 				profileLoads++;
 				if (profileText instanceof Error) throw profileText;
 				return profileText;
@@ -86,9 +87,6 @@ async function harness(verdict = "SAFE", confirmed = false, hasUI = true,
 					options?.spawnHook({ command: "git status", cwd: ctx.cwd, env: {} });
 					calls.push(options ? "sandbox" : "unsandboxed");
 					if (options && startupError) throw new Error(startupError);
-					if (options && maskedNetworkFailure) {
-						return { content: [{ type: "text", text: "dial tcp [::1]:5432: connect: operation not permitted" }], details: {} };
-					}
 					if (options) {
 						if (ordinaryFailure) throw new Error("Command exited with code 1");
 						throw new Error(`fatal: '${path.join(ctx.cwd, ".git", "index.lock")}': Operation not permitted`);
@@ -114,14 +112,15 @@ async function harness(verdict = "SAFE", confirmed = false, hasUI = true,
 	(module.namespace as any).default({
 		registerTool: (definition: unknown) => { tool = definition; },
 		on: (name: string, handler: Function) => hooks.set(name, handler),
+		events: { on: (name: string, handler: (data: unknown) => void) => events.set(name, handler) },
 	});
 	const run = (escalate = false, command = "git status", signal?: AbortSignal) => tool.execute("id", { command, escalate }, signal, undefined, ctx);
 	return {
 		calls, ctx, hooks, run, notifications, approvalNotifications, eventOrder, resolvedProfiles,
+		setPlanMode: (enabled: boolean) => events.get("plan-mode:state")!({ enabled }),
 		profileLoads: () => profileLoads,
 		setProfile: (text: string) => { profileText = text; },
 		failRetry: () => { failRetry = true; },
-		maskedNetworkFailure: () => { maskedNetworkFailure = true; },
 		ordinaryFailure: () => { ordinaryFailure = true; },
 		failSetup: () => { failSetup = true; },
 		missingExecutable: () => { missingExecutable = true; },
@@ -138,6 +137,36 @@ test("reads and navigation never classify or prompt, regardless of path or model
 			}
 		}
 		assert.deepEqual(h.calls, []);
+	}
+});
+
+test("read-only subagent inspection never classifies or prompts even without UI", async () => {
+	const h = await harness("UNSAFE", false, false);
+	for (const input of [
+		{ action: "list" }, { action: "list", capabilities: true },
+		{ action: "get", agent: "reviewer" }, { action: "models" },
+		{ action: "guide", topic: "workflows" }, { action: "children.list" },
+		{ action: "status", id: "run-1", view: "transcript", lines: 40 },
+	]) {
+		assert.equal(await h.hooks.get("tool_call")!({ toolName: "subagent", input }, h.ctx), undefined);
+	}
+	for (const action of ["list", "pending", "status"]) {
+		assert.equal(await h.hooks.get("tool_call")!({ toolName: "subagent_supervisor", input: { action } }, h.ctx), undefined);
+	}
+	assert.equal(await h.hooks.get("tool_call")!({ toolName: "bg_wait", input: { id: "run-1", nonBlocking: true } }, h.ctx), undefined);
+	assert.deepEqual(h.calls, []);
+});
+
+test("subagent launches, mutations and inspection calls with unexpected fields still require classification", async () => {
+	for (const input of [
+		{ agent: "worker", task: "change files" },
+		{ action: "delete", agent: "worker" },
+		{ action: "list", task: "change files" },
+		{ action: "status", workflowScript: "return runs.run('x', { agent: 'worker' })" },
+	]) {
+		const h = await harness("UNSAFE", false, false);
+		assert.equal((await h.hooks.get("tool_call")!({ toolName: "subagent", input }, h.ctx))?.block, true);
+		assert.deepEqual(h.calls, ["classify"]);
 	}
 });
 
@@ -171,10 +200,10 @@ test("research gets complete arguments and explicit routine authorization, but s
 	}
 });
 
-test("routine edits include their changes and project root, and SAFE never prompts", async () => {
+test("sensitive edits include their changes and project root, and SAFE never prompts", async () => {
 	const inputs = [
-		{ toolName: "edit", input: { path: "test/example.ts", edits: [{ oldText: "assert.equal(sum(1, 2), 4)", newText: "assert.equal(sum(1, 2), 3)" }] } },
-		{ toolName: "write", input: { path: "test/example.ts", content: "assert.equal(sum(1, 2), 3);\n" } },
+		{ toolName: "edit", input: { path: "config/pi/agent/extensions/auto-approve/index.ts", edits: [{ oldText: "assert.equal(sum(1, 2), 4)", newText: "assert.equal(sum(1, 2), 3)" }] } },
+		{ toolName: "write", input: { path: "config/pi/agent/extensions/auto-approve/new.ts", content: "assert.equal(sum(1, 2), 3);\n" } },
 	];
 	for (const hasUI of [true, false]) {
 		for (const event of inputs) {
@@ -196,11 +225,23 @@ test("routine edits include their changes and project root, and SAFE never promp
 	}
 });
 
-test("every edit/write is classified and unsafe verdicts reach the user", async () => {
+test("ordinary project edits proceed without a classifier or prompt even when the model would refuse", async () => {
+	for (const event of [
+		{ toolName: "edit", input: { path: "config/pi/agent/extensions/example.ts", edits: [{ oldText: "old", newText: "new" }] } },
+		{ toolName: "write", input: { path: "config/pi/agent/extensions/new-example.ts", content: "export const value = 1;\n" } },
+	]) {
+		const h = await harness("UNSAFE", false, false);
+		assert.equal(await h.hooks.get("tool_call")!(event, h.ctx), undefined);
+		assert.deepEqual(h.calls, []);
+	}
+});
+
+test("sensitive or out-of-project edits are classified and unsafe verdicts reach the user", async () => {
 	for (const toolName of ["edit", "write"]) {
-		for (const target of ["README.md", path.join(process.cwd(), "..", "outside")]) {
+		for (const target of ["config/pi/agent/extensions/auto-approve/index.ts", ".env.local", path.join(process.cwd(), "..", "outside")]) {
 			const h = await harness("UNSAFE");
-			const result = await h.hooks.get("tool_call")!({ toolName, input: { path: target } }, h.ctx);
+			const input = toolName === "edit" ? { path: target, edits: [{ oldText: "old", newText: "new" }] } : { path: target, content: "new" };
+			const result = await h.hooks.get("tool_call")!({ toolName, input }, h.ctx);
 			assert.equal(result?.block, true);
 			assert.deepEqual(h.calls, ["classify", "prompt"]);
 		}
@@ -276,21 +317,29 @@ test("routine approval cancellation never leaves a prompt or approval behind", a
 	}
 });
 
-test("explicit escalation requires the exact failed command and cwd; SAFE is one-shot without UI", async () => {
+test("ordinary Bash calls use the routine verdict before entering the sandbox", async () => {
+	for (const verdict of ["SAFE", "UNSAFE"] as const) {
+		const h = await harness(verdict, false);
+		const result = await h.hooks.get("tool_call")!({ toolName: "bash", input: { command: "git status" } }, h.ctx);
+		assert.equal(result?.block, verdict === "UNSAFE" ? true : undefined);
+		assert.deepEqual(h.calls, verdict === "SAFE" ? ["classify"] : ["classify", "prompt"]);
+		if (verdict === "SAFE") {
+			await assert.rejects(h.run(), /Operation not permitted/);
+			assert.equal(h.calls.at(-1), "sandbox");
+		}
+	}
+});
+
+test("SAFE explicit escalation runs any command outside the sandbox without a prior failure", async () => {
 	const h = await harness("SAFE", false, false);
-	await assert.rejects(h.run(true), /requires this exact command/);
-	await assert.rejects(h.run(), /Operation not permitted/);
-	await assert.rejects(h.run(true, "git diff"), /requires this exact command/);
-	const cwd = h.ctx.cwd;
-	h.ctx.cwd = "/tmp";
-	await assert.rejects(h.run(true), /requires this exact command/);
-	h.ctx.cwd = cwd;
-	const results = await Promise.allSettled([h.run(true), h.run(true)]);
-	assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
-	assert.deepEqual(h.calls, ["sandbox", "classify", "unsandboxed"]);
-	await assert.rejects(h.run(), /Operation not permitted/);
-	assert.equal(h.calls.at(-1), "sandbox");
-	await assert.rejects(h.run(true), /already decided/);
+	let request: any;
+	const complete = h.ctx.modelRegistry.complete;
+	h.ctx.modelRegistry.complete = async (...args) => { request = args[1]; return complete(...args); };
+	await h.run(true, "git diff");
+	await h.run(true, "git diff");
+	assert.deepEqual(h.calls, ["classify", "unsandboxed", "classify", "unsandboxed"]);
+	assert.match(request.systemPrompt, /full permissions/);
+	assert.deepEqual(h.approvalNotifications, []);
 });
 
 test("UNSAFE and classifier failures require confirmation and fail closed without UI", async () => {
@@ -298,38 +347,37 @@ test("UNSAFE and classifier failures require confirmation and fail closed withou
 		for (const hasUI of [true, false]) {
 			for (const confirmed of [true, false]) {
 				const h = await harness(verdict, confirmed, hasUI);
-				await assert.rejects(h.run(), /Operation not permitted/);
 				if (hasUI && confirmed) await h.run(true);
 				else await assert.rejects(h.run(true), /declined|no UI/);
-				assert.deepEqual(h.calls, ["sandbox", "classify", ...(hasUI ? ["prompt"] : []), ...(hasUI && confirmed ? ["unsandboxed"] : [])]);
-				await assert.rejects(h.run(true), /already decided/);
+				assert.deepEqual(h.calls, ["classify", ...(hasUI ? ["prompt"] : []), ...(hasUI && confirmed ? ["unsandboxed"] : [])]);
 			}
 		}
 	}
 });
 
-test("network denials masked by a successful pipeline qualify for escalation", async () => {
+test("sandbox denials never trigger automatic unsandboxed retries", async () => {
 	const h = await harness();
-	h.maskedNetworkFailure();
-	await h.run();
+	await assert.rejects(h.run(), /Operation not permitted/);
+	assert.equal(h.hooks.has("tool_result"), false);
+	assert.deepEqual(h.calls, ["sandbox"]);
 	await h.run(true);
 	assert.deepEqual(h.calls, ["sandbox", "classify", "unsandboxed"]);
 });
 
-test("ordinary command failures do not qualify for escalation", async () => {
+test("ordinary command failures can be explicitly escalated", async () => {
 	const h = await harness();
 	h.ordinaryFailure();
 	await assert.rejects(h.run(), /Command exited with code 1/);
-	await assert.rejects(h.run(true), /requires this exact command/);
-	assert.deepEqual(h.calls, ["sandbox"]);
+	await h.run(true);
+	assert.deepEqual(h.calls, ["sandbox", "classify", "unsandboxed"]);
 });
 
-test("sandbox setup failures do not qualify for escalation", async () => {
+test("explicit escalation does not depend on sandbox setup", async () => {
 	const h = await harness();
 	h.failSetup();
 	await assert.rejects(h.run(), /profile unavailable/);
-	await assert.rejects(h.run(true), /requires this exact command/);
-	assert.deepEqual(h.calls, []);
+	await h.run(true);
+	assert.deepEqual(h.calls, ["classify", "unsandboxed"]);
 });
 
 test("missing sandbox-exec reports bash unavailable and fails closed", async () => {
@@ -338,11 +386,11 @@ test("missing sandbox-exec reports bash unavailable and fails closed", async () 
 	await h.hooks.get("session_start")!({}, h.ctx);
 	assert.match(h.notifications[0], /bash unavailable/);
 	await assert.rejects(h.run(), /bash unavailable/);
-	await assert.rejects(h.run(true), /requires this exact command/);
-	assert.deepEqual(h.calls, []);
+	await h.run(true);
+	assert.deepEqual(h.calls, ["classify", "unsandboxed"]);
 });
 
-test("sandbox profile application errors never qualify for escalation", async () => {
+test("sandbox profile application errors can be explicitly escalated", async () => {
 	for (const message of [
 		"sandbox-exec: sandbox_apply: Operation not permitted",
 		"sandbox-exec: invalid profile: unbound variable",
@@ -351,15 +399,14 @@ test("sandbox profile application errors never qualify for escalation", async ()
 		const h = await harness();
 		h.startupError(message);
 		await assert.rejects(h.run(), /sandbox-exec:/);
-		await assert.rejects(h.run(true), /requires this exact command/);
-		assert.deepEqual(h.calls, ["sandbox"]);
+		await h.run(true);
+		assert.deepEqual(h.calls, ["sandbox", "classify", "unsandboxed"]);
 	}
 });
 
-test("aborting classification or confirmation releases the reservation and uses the tool signal", async () => {
+test("aborting classification or confirmation never runs the unsandboxed command", async () => {
 	for (const stage of ["classify", "confirm"]) {
 		const h = await harness(stage === "confirm" ? "UNSAFE" : "SAFE", true);
-		await assert.rejects(h.run(), /Operation not permitted/);
 		const controller = new AbortController();
 		const complete = h.ctx.modelRegistry.complete;
 		const confirm = h.ctx.ui.confirm;
@@ -384,28 +431,37 @@ test("aborting classification or confirmation releases the reservation and uses 
 		h.ctx.ui.confirm = confirm;
 		await h.run(true);
 		assert.equal(h.calls.filter((call) => call === "unsandboxed").length, 1);
-		await assert.rejects(h.run(true), /already decided/);
 	}
 });
 
-test("an escalated failure is not automatically escalated again", async () => {
+test("a failed escalated command is never retried automatically", async () => {
 	const h = await harness();
-	await assert.rejects(h.run(), /Operation not permitted/);
 	h.failRetry();
 	await assert.rejects(h.run(true), /Operation not permitted/);
-	assert.equal(await h.hooks.get("tool_result")!({ toolName: "bash", isError: true, input: { command: "git status", escalate: true } }, h.ctx), undefined);
-	await assert.rejects(h.run(true), /already decided/);
+	assert.deepEqual(h.calls, ["classify", "unsandboxed"]);
+	assert.equal(h.hooks.has("tool_result"), false);
 });
 
-test("automatic denied-write retries share the escalation gate", async () => {
-	const h = await harness();
-	const command = "git status";
+test("planning switches Bash to a read-only profile and never offers an unsandboxed retry", async () => {
+	const h = await harness("SAFE", true);
+	h.setPlanMode(true);
+	assert.equal(await h.hooks.get("tool_call")!({ toolName: "bash", input: { command: "git status" } }, h.ctx), undefined);
+	assert.equal((await h.hooks.get("tool_call")!({ toolName: "bash", input: { command: "git status", escalate: true } }, h.ctx))?.block, true);
+	assert.equal((await h.hooks.get("tool_call")!({ toolName: "edit", input: { path: "README.md" } }, h.ctx))?.block, true);
 	await assert.rejects(h.run(), /Operation not permitted/);
-	const result = await h.hooks.get("tool_result")!({
-		toolName: "bash", toolCallId: "id", isError: true, input: { command },
-		content: [{ type: "text", text: `fatal: '${path.join(h.ctx.cwd, ".git/index.lock")}': Operation not permitted` }],
-	}, h.ctx);
-	assert.equal(result.isError, false);
+	assert.equal(h.resolvedProfiles.at(-1), "read-only policy");
+	await assert.rejects(h.run(true), /Escalation disabled in plan mode/);
+	assert.deepEqual(h.calls, ["sandbox"]);
+	h.setPlanMode(false);
+	await h.run(true);
 	assert.deepEqual(h.calls, ["sandbox", "classify", "unsandboxed"]);
-	await assert.rejects(h.run(true), /already decided/);
+	await assert.rejects(h.run(), /Operation not permitted/);
+	assert.equal(h.resolvedProfiles.at(-1), "trusted policy");
+});
+
+test("entering plan mode while an escalation is awaiting approval prevents execution", async () => {
+	const h = await harness("UNSAFE", true);
+	h.ctx.ui.confirm = async () => { h.setPlanMode(true); return true; };
+	await assert.rejects(h.run(true), /Escalation disabled in plan mode/);
+	assert.deepEqual(h.calls, ["classify"]);
 });

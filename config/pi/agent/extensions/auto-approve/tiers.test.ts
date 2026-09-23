@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, rmSync, symlinkSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
@@ -9,6 +9,7 @@ import {
 	USER_CONTEXT_CHAR_BUDGET,
 	classifySubject,
 	classifyToolCall,
+	isRoutineProjectEdit,
 	isSafeVerdict,
 	isSandboxDenial,
 	sandboxDeniedWrite,
@@ -142,15 +143,27 @@ test("is empty when the branch holds no user message", () => {
 	);
 });
 
-test("only local reads, cached research, memory and questions bypass classification on every platform", () => {
+test("inspection, waits and questions bypass classification on every platform", () => {
 	for (const platform of ["darwin", "linux", "win32"] as const) {
 		for (const sandboxEnabled of [true, false]) {
-			const classify = (toolName: string) => classifyToolCall({ toolName, platform, sandboxEnabled });
-			for (const toolName of ["read", "grep", "find", "ls", "get_search_content", "memory_search", "memory_get", "ask_user_question"]) {
+			const classify = (toolName: string, input: unknown = {}) => classifyToolCall({ toolName, input, platform, sandboxEnabled });
+			for (const toolName of ["read", "grep", "find", "ls", "get_search_content", "memory_search", "memory_get", "bg_wait", "ask_user_question"]) {
 				assert.equal(classify(toolName).kind, "bypass", toolName);
 			}
 			for (const toolName of ["bash", "powershell", "edit", "write", "web_search", "source_check", "fetch_content", "ui_capture", "ui_audit", "linear_update_issue", "custom-tool"]) {
 				assert.equal(classify(toolName).kind, "classify", toolName);
+			}
+			for (const input of [{ action: "list" }, { action: "list", capabilities: true }, { action: "get", agent: "reviewer" }, { action: "models" }, { action: "guide", topic: "workflows" }, { action: "children.list" }, { action: "status", view: "fleet" }, { action: "debug.run", id: "run-1" }]) {
+				assert.equal(classify("subagent", input).kind, "bypass", JSON.stringify(input));
+			}
+			for (const input of [undefined, [], {}, { agent: "worker", task: "write files" }, { action: "delete", agent: "worker" }, { action: "list", task: "write files" }, { action: "status", workflowScript: "return runs.run('x', {agent:'worker'})" }]) {
+				assert.equal(classify("subagent", input).kind, "classify", JSON.stringify(input));
+			}
+			for (const action of ["list", "pending", "status"]) {
+				assert.equal(classify("subagent_supervisor", { action }).kind, "bypass", action);
+			}
+			for (const input of [{ action: "reply", message: "yes" }, { action: "send", message: "hello" }, { action: "list", message: "hello" }]) {
+				assert.equal(classify("subagent_supervisor", input).kind, "classify", JSON.stringify(input));
 			}
 		}
 	}
@@ -183,6 +196,33 @@ test("classifySubject hands the classifier complete arguments without lossy summ
 	for (const tool of ["web_search", "source_check", "fetch_content", "linear_update_issue", "custom-tool"]) {
 		const input = { description: "x".repeat(5000), destination: "https://example.com", body: "must remain visible" };
 		assert.equal(classifySubject(tool, input), `${tool} ${JSON.stringify(input)}`);
+	}
+});
+
+test("routine project edit bypass excludes malformed, sensitive, outside and symlinked paths", () => {
+	const root = mkdtempSync(join(tmpdir(), "pi-approval-paths-"));
+	const aliasDir = mkdtempSync(join(tmpdir(), "pi-approval-alias-"));
+	try {
+		const alias = join(aliasDir, "link");
+		symlinkSync(root, alias);
+		mkdirSync(join(root, "src"));
+		symlinkSync(tmpdir(), join(root, "src", "external"));
+		symlinkSync(join(root, "missing"), join(root, "src", "dangling"));
+		const edit = (path: string) => isRoutineProjectEdit("edit", { path, edits: [{ oldText: "old", newText: "new" }] }, root);
+		const write = (path: string) => isRoutineProjectEdit("write", { path, content: "new" }, root);
+		assert.equal(edit("src/example.ts"), true);
+		assert.equal(write("src/new.ts"), true);
+		assert.equal(edit(join(alias, "src", "example.ts")), false, "absolute symlink aliases require classification");
+		for (const target of [".git/config", ".env.local", ".bash_profile.local", "src/id_ed25519", "src/secret.key", "config/pi/agent/settings.json", "config/pi/agent/extensions/auto-approve/index.ts", "config/pi/agent/extensions/plan-mode/index.ts", "config/pi/agent/APPEND_SYSTEM.md", "../outside", "src/external/file.ts", "src/dangling/file.ts"]) {
+			assert.equal(edit(target), false, target);
+			assert.equal(write(target), false, target);
+		}
+		assert.equal(isRoutineProjectEdit("edit", { path: "src/example.ts", edits: [] }, root), false);
+		assert.equal(isRoutineProjectEdit("write", { path: "src/example.ts" }, root), false);
+		assert.equal(isRoutineProjectEdit("bash", { path: "src/example.ts", content: "new" }, root), false);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+		rmSync(aliasDir, { recursive: true, force: true });
 	}
 });
 
