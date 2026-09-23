@@ -6,17 +6,20 @@
  *
  * Features:
  * - /plan command or Ctrl+Alt+P to toggle
- * - Bash disabled while planning
+ * - Bash uses auto-approve's read-only sandbox while planning
  * - Extracts numbered plan steps from "Plan:" sections
  * - [DONE:n] markers to complete steps during execution
- * - Progress tracking widget during execution
+ * - Compact plan preview and progress widget
  */
 
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import type { AssistantMessage, TextContent } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { Key } from "@earendil-works/pi-tui";
+import { realpathSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { Key, truncateToWidth } from "@earendil-works/pi-tui";
 import {
+	cleanStepText,
 	extractTodoItems,
 	getPlanModeTools,
 	isPlanModeBlockedTool,
@@ -49,6 +52,23 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 	let executionMode = false;
 	let todoItems: TodoItem[] = [];
 	let toolsBeforePlanMode: string[] | undefined;
+	const trustedPaths: Record<string, string> = {
+		bash: realpathSync(fileURLToPath(new URL("../auto-approve/index.ts", import.meta.url))),
+		ask_user_question: realpathSync(fileURLToPath(new URL("../ask-user-question.ts", import.meta.url))),
+	};
+
+	function trustedTool(name: string, mode: ExtensionContext["mode"] = "tui"): boolean {
+		if (isPlanModeBlockedTool(name)) return false;
+		if (name === "ask_user_question" && mode !== "tui") return false;
+		const info = pi.getAllTools().find((tool) => tool.name === name);
+		if (!info) return false;
+		if (["read", "grep", "find", "ls"].includes(name)) return info.sourceInfo.source === "builtin";
+		try {
+			return realpathSync(info.sourceInfo.path) === trustedPaths[name];
+		} catch {
+			return false;
+		}
+	}
 
 	pi.registerFlag("plan", {
 		description: "Start in plan mode (read-only exploration)",
@@ -57,6 +77,7 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 	});
 
 	function updateStatus(ctx: ExtensionContext): void {
+		if (!ctx.hasUI) return;
 		// Footer status
 		if (executionMode && todoItems.length > 0) {
 			const completed = todoItems.filter((t) => t.completed).length;
@@ -67,32 +88,38 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 			ctx.ui.setStatus("plan-mode", undefined);
 		}
 
-		// Widget showing todo list
-		if (executionMode && todoItems.length > 0) {
-			const lines = todoItems.map((item) => {
-				if (item.completed) {
-					return (
-						ctx.ui.theme.fg("success", "☑ ") + ctx.ui.theme.fg("muted", ctx.ui.theme.strikethrough(item.text))
-					);
-				}
-				return `${ctx.ui.theme.fg("muted", "☐ ")}${item.text}`;
-			});
-			ctx.ui.setWidget("plan-todos", lines);
-		} else {
-			ctx.ui.setWidget("plan-todos", undefined);
-		}
+		// Keep the editor uncluttered; /todos shows the full plan.
+		if (todoItems.length > 0) {
+			const completed = todoItems.filter((t) => t.completed).length;
+			const lines = [`Plan · ${completed}/${todoItems.length} · /todos · /plan execute`];
+			for (const item of todoItems.slice(0, 4)) {
+				lines.push(`${item.completed ? "✓" : "○"} ${item.step}. ${cleanStepText(item.text)}`);
+			}
+			if (todoItems.length > 4) lines.push(`… ${todoItems.length - 4} more steps`);
+			if (ctx.mode === "tui") {
+				ctx.ui.setWidget("plan-todos", (_tui, theme) => ({
+					render: (width: number) => lines.map((line, i) => truncateToWidth(theme.fg(i === 0 ? "accent" : "muted", line), width)),
+					invalidate() {},
+				}));
+			} else ctx.ui.setWidget("plan-todos", lines);
+		} else ctx.ui.setWidget("plan-todos", undefined);
 	}
 
-	function enablePlanModeTools(): void {
+	function enablePlanModeTools(ctx: Pick<ExtensionContext, "mode">): void {
 		if (toolsBeforePlanMode === undefined) {
 			toolsBeforePlanMode = pi.getActiveTools();
 		}
-		pi.setActiveTools(getPlanModeTools(toolsBeforePlanMode));
+		const planTools = getPlanModeTools(toolsBeforePlanMode).filter((name) => trustedTool(name, ctx.mode));
+		pi.setActiveTools(ctx.mode === "tui" ? planTools : planTools.filter((name) => name !== "ask_user_question"));
 	}
 
 	function restoreNormalModeTools(): void {
 		if (toolsBeforePlanMode !== undefined) pi.setActiveTools(toolsBeforePlanMode);
 		toolsBeforePlanMode = undefined;
+	}
+
+	function publishMode(): void {
+		pi.events.emit("plan-mode:state", { enabled: planModeEnabled });
 	}
 
 	function persistState(): void {
@@ -105,24 +132,67 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 	}
 
 	function togglePlanMode(ctx: ExtensionContext): void {
+		if (!ctx.isIdle()) {
+			ctx.ui.notify("Wait for the current turn to finish (or abort it) before changing plan mode.", "warning");
+			return;
+		}
 		planModeEnabled = !planModeEnabled;
 		executionMode = false;
 		todoItems = [];
 
 		if (planModeEnabled) {
-			enablePlanModeTools();
-			ctx.ui.notify("Plan mode enabled. Only active read-only tools and questions are available.");
+			enablePlanModeTools(ctx);
+			ctx.ui.notify("Plan mode enabled. Bash, when available, uses a read-only sandbox; no escalation.");
 		} else {
 			restoreNormalModeTools();
 			ctx.ui.notify("Plan mode disabled. Full access restored.");
 		}
+		publishMode();
 		updateStatus(ctx);
 		persistState();
 	}
 
+	async function executePlan(ctx: ExtensionContext, offeredPlan: TodoItem[]): Promise<void> {
+		const confirmed = await ctx.ui.confirm(
+			"Execute this plan with full tool access?",
+			offeredPlan.map((t) => `${t.step}. ${t.text}`).join("\n"),
+		);
+		if (!confirmed || !planModeEnabled || todoItems !== offeredPlan) return;
+		const firstTodoItem = todoItems[0];
+		if (!firstTodoItem) return;
+
+		planModeEnabled = false;
+		executionMode = true;
+		restoreNormalModeTools();
+		publishMode();
+		updateStatus(ctx);
+		persistState();
+
+		const remainingList = todoItems.map((t) => `${t.step}. ${t.text}`).join("\n");
+		pi.sendMessage({
+			customType: "plan-todo-list",
+			content: `**Plan Steps (${todoItems.length}):**\n\n${remainingList}`,
+			display: true,
+		}, { deliverAs: "followUp" });
+		pi.sendMessage({
+			customType: "plan-mode-execute",
+			content: `Execute the plan.\n\nRemaining steps:\n${remainingList}\n\nStart with: ${firstTodoItem.text}\nAfter completing a step, put [DONE:n] on its own line in your response.`,
+			display: true,
+		}, { triggerTurn: true, deliverAs: "followUp" });
+	}
+
 	pi.registerCommand("plan", {
-		description: "Toggle plan mode (read-only exploration)",
-		handler: async (_args, ctx) => togglePlanMode(ctx),
+		description: "Toggle plan mode, or /plan execute to review and run the current plan",
+		handler: async (args, ctx) => {
+			if (args.trim() === "execute") {
+				if (!planModeEnabled || todoItems.length === 0 || !ctx.hasUI) {
+					ctx.ui.notify("Draft a plan in interactive plan mode before executing it.", "warning");
+					return;
+				}
+				await executePlan(ctx, todoItems);
+			} else if (!args.trim()) togglePlanMode(ctx);
+			else ctx.ui.notify("Usage: /plan [execute]", "warning");
+		},
 	});
 
 	pi.registerCommand("todos", {
@@ -143,8 +213,8 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 	});
 
 	// Defense in depth for calls from a turn that started before Plan Mode was enabled.
-	pi.on("tool_call", async (event) => {
-		if (!planModeEnabled || !isPlanModeBlockedTool(event.toolName)) return;
+	pi.on("tool_call", async (event, ctx) => {
+		if (!planModeEnabled || trustedTool(event.toolName, ctx.mode)) return;
 
 		return {
 			block: true,
@@ -164,7 +234,7 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 	});
 
 	// Inject plan/execution context before agent starts
-	pi.on("before_agent_start", async () => {
+	pi.on("before_agent_start", async (_event, ctx) => {
 		if (planModeEnabled) {
 			return {
 				message: {
@@ -173,11 +243,12 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 You are in plan mode - a read-only exploration mode for safe code analysis.
 
 Restrictions:
-- Only already-active read, grep, find, ls, and ask_user_question tools are allowed
-- Shells, writes, subagents, and all other tools are disabled
+- Only already-active trusted read, grep, find, ls, bash, and (interactive only) ask_user_question are allowed
+- Bash runs in auto-approve's read-only, network-denied sandbox; no unsandboxed retry is available
+- Writes, subagents, and all other tools are disabled
 
-Ask clarifying questions using the ask_user_question tool.
-Use available read-only tools for code analysis and research.
+${ctx.mode === "tui" && pi.getActiveTools().includes("ask_user_question") ? "Ask clarifying questions using ask_user_question." : "Ask clarifying questions in ordinary text."}
+Use available read-only tools for code analysis. Shell commands that write files (including caches) will fail.
 
 Create a detailed numbered plan under a "Plan:" header:
 
@@ -204,7 +275,7 @@ Remaining steps:
 ${todoList}
 
 Execute each step in order.
-After completing a step, include a [DONE:n] tag in your response.`,
+After completing a step, put [DONE:n] on its own line in your response.`,
 					display: false,
 				},
 			};
@@ -241,19 +312,17 @@ After completing a step, include a [DONE:n] tag in your response.`,
 			return;
 		}
 
-		if (!planModeEnabled || !ctx.hasUI) return;
+		if (!planModeEnabled) return;
 
-		// Extract todos from last assistant message
+		// Only offer a plan when the current response produced one, not on every later turn.
 		const lastAssistant = [...event.messages].reverse().find(isAssistantMessage);
-		if (lastAssistant) {
-			const extracted = extractTodoItems(getTextContent(lastAssistant));
-			if (extracted.length > 0) {
-				todoItems = extracted;
-			}
-		}
-
-		if (todoItems.length === 0) return;
+		const extracted = lastAssistant && (!lastAssistant.stopReason || lastAssistant.stopReason === "stop")
+			? extractTodoItems(getTextContent(lastAssistant)) : [];
+		if (extracted.length === 0) return;
+		todoItems = extracted;
 		persistState();
+		updateStatus(ctx);
+		if (ctx.mode !== "tui") return;
 
 		// Show plan steps and prompt for next action
 		const todoListText = todoItems.map((t, i) => `${i + 1}. ☐ ${t.text}`).join("\n");
@@ -264,36 +333,15 @@ After completing a step, include a [DONE:n] tag in your response.`,
 		};
 
 		const offeredPlan = todoItems;
-		const choice = await ctx.ui.select("Plan mode - what next?", [
-			"Execute the plan (track progress)",
+		const choice = await ctx.ui.select(`Plan ready (${todoItems.length} steps) · /plan execute later`, [
 			"Stay in plan mode",
+			"Review and execute",
 			"Refine the plan",
 		]);
 		if (!planModeEnabled || todoItems !== offeredPlan) return;
 
-		if (choice?.startsWith("Execute")) {
-			const firstTodoItem = todoItems[0];
-			if (!firstTodoItem) return;
-
-			planModeEnabled = false;
-			executionMode = true;
-			restoreNormalModeTools();
-			updateStatus(ctx);
-			persistState();
-
-			const remainingList = todoItems.map((t) => `${t.step}. ${t.text}`).join("\n");
-			const execMessage = `Execute the plan.
-
-Remaining steps:
-${remainingList}
-
-Start with: ${firstTodoItem.text}
-After completing a step, include a [DONE:n] tag in your response.`;
-			pi.sendMessage(planTodoListMessage, { deliverAs: "followUp" });
-			pi.sendMessage(
-				{ customType: "plan-mode-execute", content: execMessage, display: true },
-				{ triggerTurn: true, deliverAs: "followUp" },
-			);
+		if (choice === "Review and execute") {
+			await executePlan(ctx, offeredPlan);
 		} else if (choice === "Refine the plan") {
 			const refinement = await ctx.ui.editor("Refine the plan:", "");
 			if (!planModeEnabled || todoItems !== offeredPlan) return;
@@ -353,8 +401,9 @@ After completing a step, include a [DONE:n] tag in your response.`;
 		if (planModeEnabled) {
 			const savedTools = planModeEntry?.data?.toolsBeforePlanMode;
 			toolsBeforePlanMode = savedTools ? normalTools.filter((name) => savedTools.includes(name)) : normalTools;
-			enablePlanModeTools();
+			enablePlanModeTools(ctx);
 		}
+		publishMode();
 		updateStatus(ctx);
 	}
 

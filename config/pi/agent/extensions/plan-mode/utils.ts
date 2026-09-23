@@ -3,7 +3,7 @@
  * Extracted for testability.
  */
 
-export const PLAN_MODE_TOOLS = ["read", "grep", "find", "ls", "ask_user_question"];
+export const PLAN_MODE_TOOLS = ["read", "grep", "find", "ls", "bash", "ask_user_question"];
 export function isPlanModeBlockedTool(toolName: string): boolean {
 	return !PLAN_MODE_TOOLS.includes(toolName);
 }
@@ -22,10 +22,6 @@ export function cleanStepText(text: string): string {
 	let cleaned = text
 		.replace(/\*{1,2}([^*]+)\*{1,2}/g, "$1") // Remove bold/italic
 		.replace(/`([^`]+)`/g, "$1") // Remove code
-		.replace(
-			/^(Use|Run|Execute|Create|Write|Read|Check|Verify|Update|Modify|Add|Remove|Delete|Install)\s+(the\s+)?/i,
-			"",
-		)
 		.replace(/\s+/g, " ")
 		.trim();
 
@@ -44,18 +40,20 @@ export function extractTodoItems(message: string): TodoItem[] {
 	if (!headerMatch) return items;
 
 	const planSection = message.slice(message.indexOf(headerMatch[0]) + headerMatch[0].length);
-	const numberedPattern = /^\s*(\d+)[.)]\s+\*{0,2}([^*\n]+)/gm;
-
-	for (const match of planSection.matchAll(numberedPattern)) {
-		const text = match[2]
-			.trim()
-			.replace(/\*{1,2}$/, "")
-			.trim();
-		if (text.length > 5 && !text.startsWith("`") && !text.startsWith("/") && !text.startsWith("-")) {
-			const cleaned = cleanStepText(text);
-			if (cleaned.length > 3) {
-				items.push({ step: items.length + 1, text: cleaned, completed: false });
-			}
+	let inCodeBlock = false;
+	for (const line of planSection.split("\n")) {
+		if (/^\s*```/.test(line)) {
+			inCodeBlock = !inCodeBlock;
+			continue;
+		}
+		if (inCodeBlock) continue;
+		if (/^\s*(?:#{1,6}\s+)?[\w][^\n]*:\s*$/.test(line) || /^\s*#{1,6}\s+\S/.test(line)) break;
+		const match = line.match(/^(\d+)[.)]\s+(.+?)\s*$/);
+		if (match) {
+			const text = match[2].trim();
+			if (text.length > 3) items.push({ step: items.length + 1, text, completed: false });
+		} else if (/^\s{2,}\S/.test(line) && items.length > 0) {
+			items[items.length - 1].text += `\n${line.trim()}`;
 		}
 	}
 	return items;
@@ -63,18 +61,28 @@ export function extractTodoItems(message: string): TodoItem[] {
 
 export function extractDoneSteps(message: string): number[] {
 	const steps: number[] = [];
-	for (const match of message.matchAll(/\[DONE:(\d+)\]/gi)) {
-		const step = Number(match[1]);
-		if (Number.isFinite(step)) steps.push(step);
+	let inCodeBlock = false;
+	for (const line of message.split("\n")) {
+		if (/^\s*```/.test(line)) {
+			inCodeBlock = !inCodeBlock;
+			continue;
+		}
+		if (inCodeBlock) continue;
+		const match = line.match(/^\s*\[DONE:(\d+)\]\s*$/i);
+		if (match) steps.push(Number(match[1]));
 	}
 	return steps;
 }
 
 export function markCompletedSteps(text: string, items: TodoItem[]): number {
 	const doneSteps = extractDoneSteps(text);
+	let changed = 0;
 	for (const step of doneSteps) {
 		const item = items.find((t) => t.step === step);
-		if (item) item.completed = true;
+		if (item && !item.completed) {
+			item.completed = true;
+			changed++;
+		}
 	}
-	return doneSteps.length;
+	return changed;
 }
