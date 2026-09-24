@@ -1,6 +1,6 @@
 # Dotfiles
 
-My personal dotfiles configuration for Bash, Pi, Ghostty, and Zed.
+My personal dotfiles configuration for Bash, Pi, Ghostty, Zed, and Neovim.
 
 ## Overview
 
@@ -23,6 +23,7 @@ This repository contains my Bash configuration files and scripts to manage them 
 ### Application Configuration
 - `config/ghostty/config` - Ghostty terminal settings
 - `config/zed/settings.json` - Zed editor settings
+- `config/nvim/` - Neovim settings and pinned plugin versions
 
 ### Pi Configuration
 - `config/pi/agent/settings.json` - Global Pi settings
@@ -66,15 +67,52 @@ The installer also installs the tooling I regularly use from the terminal during
 * Ruby LSP via RubyGems
 * lazygit
 * lazysql
-* Zed text editor
+* Zed and Neovim text editors
 * Node.js runtime
+* Neovim language servers for JavaScript/TypeScript, Terraform, Dockerfiles, HTML/CSS/JSON, YAML, and Helm
+* Terraform and Helm CLIs, Prettier, and ripgrep
 
-The installer links Ghostty and Zed settings under `${XDG_CONFIG_HOME:-$HOME/.config}`. It installs `rbenv`, `ruby-build`, and the latest stable Ruby known to `ruby-build`, then selects it as rbenv’s global default. Zed is configured to automatically install its Ruby and Terraform extensions; TypeScript and Go support are built in. The installer also installs `gopls`, `ruby-lsp`, and Zed’s Terraform extension-managed `terraform-ls`. It links Pi configuration into `~/.pi/agent` (or the directory set by `PI_CODING_AGENT_DIR`); Pi installs the pinned packages in that configuration on startup. Existing files and directories are backed up as `.bak` (or `.bak.1`, `.bak.2`, etc. when needed) before being replaced with symbolic links.
+The installer links Ghostty, Zed, and Neovim settings under `${XDG_CONFIG_HOME:-$HOME/.config}`. It installs `rbenv`, `ruby-build`, and the latest stable Ruby known to `ruby-build`, then selects it as rbenv’s global default. Zed is configured to automatically install its Ruby and Terraform extensions; TypeScript and Go support are built in. The installer also installs `gopls`, `ruby-lsp`, RuboCop, and a standalone `terraform-ls` for Neovim. It links Pi configuration into `~/.pi/agent` (or the directory set by `PI_CODING_AGENT_DIR`); Pi installs the pinned packages in that configuration on startup. Existing files and directories are backed up as `.bak` (or `.bak.1`, `.bak.2`, etc. when needed) before being replaced with symbolic links.
 
 Ghostty notifications require `desktop-notifications = true` (configured here) and notifications enabled for Ghostty in macOS System Settings. To test the terminal independently of Pi, run this while Ghostty is unfocused:
 ```bash
 sleep 3; printf '\033]777;notify;Ghostty Test;OSC 777 is working\007'
 ```
+
+### Neovim
+
+Run `nvim .` from a project directory. Zed remains installed and is still the shell/Git default editor. Neovim uses [Ayu Dark](https://github.com/Shatur/neovim-ayu), matching Zed's theme; font and font size come from Ghostty.
+
+Requires Neovim 0.11.3+ and TypeScript 7+ (which includes the native `tsc --lsp` server). The installer adds missing tools but does not upgrade existing ones; use `brew upgrade neovim typescript` if needed. On first launch, [lazy.nvim](https://lazy.folke.io/) downloads the plugins; this needs internet access. Plugin revisions are tracked in `config/nvim/lazy-lock.json`. Use `:Lazy restore` after pulling changes to restore those revisions, or `:Lazy update` to deliberately update them and the lockfile.
+
+Language support uses Neovim's built-in LSP client with [nvim-lspconfig](https://github.com/neovim/nvim-lspconfig), Blink completion, and [Conform](https://github.com/stevearc/conform.nvim) for format-on-save:
+
+| Language | Language server | Save formatter |
+| --- | --- | --- |
+| Ruby | `ruby-lsp` + `rubocop --lsp` | RuboCop safe autocorrection |
+| Go | `gopls` | `gofmt` |
+| JavaScript / TypeScript / JSX / TSX | TypeScript 7's native `tsc` | Prettier |
+| Terraform | `terraform-ls` | `terraform fmt` |
+| Dockerfile | `docker-langserver` | None |
+| HTML / CSS / JSON | VS Code language servers | Prettier |
+| YAML / Helm values | `yaml-language-server` | Prettier |
+| Helm templates | `helm_ls` | Disabled to protect template syntax |
+
+Ruby executables come from the active rbenv version, without a `bundle exec` wrapper, matching Zed's launch behavior. Install `ruby-lsp` and `rubocop` for each Ruby version you use. Ruby LSP can manage its own bundle internally. RuboCop alone owns Ruby linting and save formatting to avoid duplicate diagnostics/formatters. Prettier prefers a project's local installation when available. Helm file associations preserve Zed's `templates/**/*.tpl`, `templates/**/*.yaml`, and `templates/**/*.yml` patterns.
+
+Core Vim motions and editing commands are retained. These shortcuts add IDE features (`Space` is the leader):
+
+| Keys | Action |
+| --- | --- |
+| `Space ff` / `Space fg` / `Space fb` | Find files / search project text / switch buffers |
+| `gd` / `gr` / `K` | Definition / references / documentation (with LSP attached) |
+| `Space rn` / `Space ca` | Rename symbol / code action |
+| `Space e` / `[d` / `]d` | Diagnostic details / previous / next diagnostic |
+| `Ctrl-n` / `Ctrl-p` / `Ctrl-y` / `Ctrl-e` | Next / previous / accept / dismiss completion |
+
+Searches use the current working directory, so launch Neovim from the project root. `:Explore` opens the built-in file browser. `:Tutor` starts the interactive Vim tutorial; `:checkhealth vim.lsp` and `:ConformInfo` diagnose language servers and formatters. No Nerd Font, tmux, or GUI is required. Filetype syntax highlighting uses Neovim's runtime plus `vim-helm`; there is no Treesitter parser installation to maintain.
+
+Checks: `bash tests/shell.test.sh`, `bash tests/install.test.sh`, and `bash tests/nvim.test.sh`. The Neovim smoke test uses isolated temporary config/data, downloads the pinned plugins, and requires the installed language tooling.
 
 ### Linear setup
 

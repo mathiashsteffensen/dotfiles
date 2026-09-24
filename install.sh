@@ -204,6 +204,17 @@ fi
 install_command_if_not_present "lazygit" "lazygit" "brew install lazygit"
 install_command_if_not_present "lazysql" "lazysql" "brew install lazysql"
 install_command_if_not_present "zed" "Zed" "brew install --cask zed"
+install_command_if_not_present "nvim" "Neovim" "brew install neovim"
+install_command_if_not_present "rg" "ripgrep" "brew install ripgrep"
+install_command_if_not_present "tsc" "TypeScript (with native language server)" "brew install typescript"
+install_command_if_not_present "terraform" "Terraform" "brew install hashicorp/tap/terraform"
+install_command_if_not_present "terraform-ls" "Terraform language server" "brew install terraform-ls"
+install_command_if_not_present "docker-langserver" "Dockerfile language server" "brew install dockerfile-language-server"
+install_command_if_not_present "vscode-html-language-server" "HTML, CSS, and JSON language servers" "brew install vscode-langservers-extracted"
+install_command_if_not_present "yaml-language-server" "YAML language server" "brew install yaml-language-server"
+install_command_if_not_present "helm" "Helm" "brew install helm"
+install_command_if_not_present "helm_ls" "Helm language server" "brew install helm-ls"
+install_command_if_not_present "prettier" "Prettier" "brew install prettier"
 section_end
 
 DOTFILES_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -230,6 +241,7 @@ xdg_config_dir="${XDG_CONFIG_HOME:-$HOME/.config}"
 mkdir -p "$xdg_config_dir/ghostty" "$xdg_config_dir/zed"
 link_config "$DOTFILES_DIR/config/ghostty/config" "$xdg_config_dir/ghostty/config"
 link_config "$DOTFILES_DIR/config/zed/settings.json" "$xdg_config_dir/zed/settings.json"
+link_config "$DOTFILES_DIR/config/nvim" "$xdg_config_dir/nvim"
 
 # Link the shared Pi configuration into Pi's global configuration directory.
 pi_config_dir="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
