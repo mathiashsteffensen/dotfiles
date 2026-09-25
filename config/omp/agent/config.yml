@@ -1,0 +1,14 @@
+modelRoles:
+  default: openai-codex/gpt-6-astra:xhigh
+defaultThinkingLevel: xhigh
+tier:
+  openai: priority
+  anthropic: priority
+  google: priority
+  subagent: priority
+  advisor: priority
+theme:
+  dark: titanium
+statusLine:
+  showHookStatus: true
+setupVersion: 2

@@ -1,7 +1,0 @@
-{
-  "provider": "openai-codex",
-  "model": "gpt-6-luna",
-  "sandbox": {
-    "enabled": true
-  }
-}

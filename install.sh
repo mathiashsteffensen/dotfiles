@@ -51,6 +51,7 @@ function backup_extension_entry() {
     local target="$1"
     local backup_dir="$2"
     local backup_path
+    mkdir -p "$backup_dir"
 
     backup_path="$(next_available_backup_path "$backup_dir/$(basename "$target").bak")"
     echo "Backing up existing $target to $backup_path"
@@ -72,12 +73,6 @@ function link_extension() {
     ln -s "$source" "$target"
 }
 
-function is_generated_extension_entry() {
-    local name
-    name="$(basename "$1")"
-    [[ "$name" == "node_modules" || "$name" == results.log* ]]
-}
-
 function link_extension_directory() {
     local source="$1"
     local target="$2"
@@ -95,8 +90,6 @@ function link_extension_directory() {
     mkdir -p "$target" "$backup_dir"
 
     for source_entry in "$source"/*; do
-        is_generated_extension_entry "$source_entry" && continue
-
         target_entry="$target/$(basename "$source_entry")"
         if [[ -d "$source_entry" && ! -L "$source_entry" ]]; then
             link_extension_directory "$source_entry" "$target_entry" "$backup_dir/$(basename "$source_entry")"
@@ -181,7 +174,8 @@ function install_latest_ruby_if_not_present() {
 }
 
 title "Installing development tooling..."
-install_command_if_not_present "pi" "Pi" "curl -fsSL https://pi.dev/install.sh | sh"
+export PATH="${PI_INSTALL_DIR:-$HOME/.local/bin}:${BUN_INSTALL:-$HOME/.bun}/bin:$PATH"
+install_command_if_not_present "omp" "omp" "curl -fsSL https://omp.sh/install | sh"
 initialize_homebrew
 install_command_if_not_present "brew" "Homebrew" "curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | sh"
 initialize_homebrew
@@ -243,40 +237,21 @@ link_config "$DOTFILES_DIR/config/ghostty/config" "$xdg_config_dir/ghostty/confi
 link_config "$DOTFILES_DIR/config/zed/settings.json" "$xdg_config_dir/zed/settings.json"
 link_config "$DOTFILES_DIR/config/nvim" "$xdg_config_dir/nvim"
 
-# Link the shared Pi configuration into Pi's global configuration directory.
-pi_config_dir="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
-pi_dotfiles_dir="$DOTFILES_DIR/config/pi/agent"
-mkdir -p "$pi_config_dir"
-for source in "$pi_dotfiles_dir"/*; do
+# Link the shared omp configuration into omp's native agent directory.
+omp_config_dir="${PI_CODING_AGENT_DIR:-$HOME/.omp/agent}"
+omp_dotfiles_dir="$DOTFILES_DIR/config/omp/agent"
+mkdir -p "$omp_config_dir"
+for source in "$omp_dotfiles_dir"/*; do
     [[ -f "$source" ]] || continue
 
-    relative="${source#"$pi_dotfiles_dir"/}"
-    link_config "$source" "$pi_config_dir/$relative"
+    relative="${source#"$omp_dotfiles_dir"/}"
+    link_config "$source" "$omp_config_dir/$relative"
 done
 
-pi_extensions_dir="$pi_dotfiles_dir/extensions"
-pi_extension_target_dir="$pi_config_dir/extensions"
-pi_extension_backup_dir="$pi_config_dir/backups/extensions"
-mkdir -p "$pi_extension_target_dir" "$pi_extension_backup_dir"
-
-for source in "$pi_extensions_dir"/*; do
-    [[ -f "$source" || -d "$source" ]] || continue
-    is_generated_extension_entry "$source" && continue
-
-    relative="${source#"$pi_extensions_dir"/}"
-    if [[ -d "$source" && ! -L "$source" ]]; then
-        if [[ -f "$source/package.json" ]]; then
-            echo "Installing dependencies for Pi extension $relative..."
-            npm install --prefix "$source"
-        fi
-        link_extension_directory "$source" "$pi_extension_target_dir/$relative" "$pi_extension_backup_dir/$relative"
-        if [[ -d "$source/node_modules" ]]; then
-            link_extension "$source/node_modules" "$pi_extension_target_dir/$relative/node_modules" "$pi_extension_backup_dir/$relative"
-        fi
-    else
-        link_extension "$source" "$pi_extension_target_dir/$relative" "$pi_extension_backup_dir"
-    fi
-done
+# Merge extensions without replacing unrelated local extensions or state.
+# Keep backups outside extension discovery so old code is never loaded.
+link_extension_directory "$omp_dotfiles_dir/extensions" \
+    "$omp_config_dir/extensions" "$omp_config_dir/backups/extensions"
 section_end
 
 title "Done! Your configuration is linked."

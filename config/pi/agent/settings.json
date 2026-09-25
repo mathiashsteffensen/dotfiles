@@ -1,35 +1,4 @@
 {
-  "theme": "dark",
-  "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-6-sol",
-  "packages": [
-    "npm:pi-web-access"
-  ],
-  "defaultThinkingLevel": "medium",
-  "tuiMode": "fullscreen",
-  "enableInstallTelemetry": false,
-  "quietStartup": true,
-  "defaultProjectTrust": "ask",
-  "modelThinkingLevels": {
-    "openrouter/qwen/qwen3.8-max-0902": "medium",
-    "openrouter/google/gemini-3.8-flash": "medium",
-    "openrouter/minimax/minimax-m3": "high",
-    "openai-codex/gpt-6-luna": "max",
-    "openai-codex/gpt-6-astra": "medium",
-    "openai-codex/gpt-6-sol": "xhigh"
-  },
-  "enabledModels": [
-    "openrouter/qwen/qwen3.8-max-0902",
-    "openrouter/minimax/minimax-m3",
-    "openrouter/google/gemini-3.8-flash",
-    "openrouter/google/gemini-2.5-flash-lite:nitro",
-    "openai-codex/gpt-6-astra",
-    "openai-codex/gpt-6-sol",
-    "openai-codex/gpt-6-luna"
-  ],
   "lastChangelogVersion": "0.87.1",
-  "editorPaddingX": 0,
-  "terminal": {
-    "showTerminalProgress": true
-  }
+  "theme": "dark"
 }

@@ -99,6 +99,7 @@ if command -v go >/dev/null 2>&1; then
 else
     export PATH="$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH"
 fi
+export PATH="${PI_INSTALL_DIR:-$HOME/.local/bin}:${BUN_INSTALL:-$HOME/.bun}/bin:$PATH"
 export EDITOR="zed --wait"
 export VISUAL="$EDITOR"
 
