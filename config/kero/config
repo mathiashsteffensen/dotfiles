@@ -1,0 +1,13 @@
+command = /bin/bash
+
+background = meadow
+window-translucent = true
+window-theme = system
+font-size = 13
+
+listen = tailnet://:7373
+
+keybind = cmd+right=pane.split.right
+keybind = cmd+down=pane.split.down
+keybind = cmd+f=pane.zoom
+keybind = cmd+shift+f=find.open

@@ -76,7 +76,7 @@ vim.lsp.config("ruby_lsp", {
 })
 vim.lsp.enable({
   "ruby_lsp", "rubocop", "gopls", "tsc", "terraformls",
-  "dockerls", "html", "cssls", "jsonls", "yamlls", "helm_ls",
+  "dockerls", "html", "cssls", "jsonls", "yamlls", "helm_ls", "bashls",
 })
 vim.diagnostic.config({ severity_sort = true, underline = true, virtual_text = true })
 

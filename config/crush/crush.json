@@ -1,0 +1,32 @@
+{
+  "$schema": "https://charm.land/crush.json",
+  "models": {
+    "large": {
+      "model": "gpt-6-astra",
+      "provider": "openai",
+      "reasoning_effort": "high"
+    }
+  },
+  "options": {
+    "auto_lsp": false,
+    "disabled_tools": [
+      "agent", "bash", "crush_info", "crush_logs", "job_output", "job_kill",
+      "download", "edit", "multiedit", "lsp_diagnostics", "lsp_references",
+      "lsp_restart", "lsp_symbols", "lsp_definition", "lsp_call_hierarchy",
+      "lsp_rename", "lsp_replace_symbol", "fetch", "agentic_fetch", "glob",
+      "grep", "ls", "sourcegraph", "view", "write", "list_mcp_resources",
+      "read_mcp_resource"
+    ]
+  },
+  "permissions": {
+    "allowed_tools": ["mcp_sandbox_execute"]
+  },
+  "mcp": {
+    "sandbox": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${CRUSH_GLOBAL_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/crush}/sandbox.mjs"],
+      "timeout": 360
+    }
+  }
+}

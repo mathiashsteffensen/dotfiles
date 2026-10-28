@@ -47,58 +47,6 @@ function next_available_backup_path() {
     printf '%s\n' "$candidate"
 }
 
-function backup_extension_entry() {
-    local target="$1"
-    local backup_dir="$2"
-    local backup_path
-    mkdir -p "$backup_dir"
-
-    backup_path="$(next_available_backup_path "$backup_dir/$(basename "$target").bak")"
-    echo "Backing up existing $target to $backup_path"
-    mv "$target" "$backup_path"
-}
-
-function link_extension() {
-    local source="$1"
-    local target="$2"
-    local backup_dir="$3"
-
-    if [[ -L "$target" && "$(readlink "$target")" == "$source" ]]; then
-        rm "$target"
-    elif [[ -L "$target" || -e "$target" ]]; then
-        backup_extension_entry "$target" "$backup_dir"
-    fi
-
-    echo "Linking $source -> $target"
-    ln -s "$source" "$target"
-}
-
-function link_extension_directory() {
-    local source="$1"
-    local target="$2"
-    local backup_dir="$3"
-    local source_entry
-    local target_entry
-
-    if [[ -L "$target" && "$(readlink "$target")" == "$source" ]]; then
-        # Migrate directory symlinks created by older installer versions.
-        rm "$target"
-    elif [[ -L "$target" || ( -e "$target" && ! -d "$target" ) ]]; then
-        backup_extension_entry "$target" "$(dirname "$backup_dir")"
-    fi
-
-    mkdir -p "$target" "$backup_dir"
-
-    for source_entry in "$source"/*; do
-        target_entry="$target/$(basename "$source_entry")"
-        if [[ -d "$source_entry" && ! -L "$source_entry" ]]; then
-            link_extension_directory "$source_entry" "$target_entry" "$backup_dir/$(basename "$source_entry")"
-        else
-            link_extension "$source_entry" "$target_entry" "$backup_dir"
-        fi
-    done
-}
-
 function install_command_if_not_present() {
     local cmd_name="$1"
     local display_name="$2"
@@ -143,6 +91,16 @@ function install_go_tool_if_not_present() {
     fi
 }
 
+function remove_managed_link() {
+    local source="$1"
+    local target="$2"
+
+    if [[ -L "$target" && "$(readlink "$target")" == "$source" ]]; then
+        echo "Removing retired dotfile link $target"
+        rm "$target"
+    fi
+}
+
 function install_ruby_gem_if_not_present() {
     local gem_name="$1"
     local installed_gems
@@ -174,12 +132,13 @@ function install_latest_ruby_if_not_present() {
 }
 
 title "Installing development tooling..."
-export PATH="${PI_INSTALL_DIR:-$HOME/.local/bin}:${BUN_INSTALL:-$HOME/.bun}/bin:$PATH"
-install_command_if_not_present "omp" "omp" "curl -fsSL https://omp.sh/install | sh"
+export PATH="${BUN_INSTALL:-$HOME/.bun}/bin:$PATH"
 initialize_homebrew
 install_command_if_not_present "brew" "Homebrew" "curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | sh"
 initialize_homebrew
+install_command_if_not_present "crush" "Crush" "brew install charmbracelet/tap/crush"
 install_command_if_not_present "ghostty" "Ghostty" "brew install --cask ghostty"
+install_command_if_not_present "kero" "Kero" "brew install --cask kero"
 install_command_if_not_present "go" "Go" "brew install go"
 install_command_if_not_present "node" "Node.js" "brew install node"
 install_go_tool_if_not_present "gopls" "golang.org/x/tools/gopls@latest"
@@ -199,6 +158,8 @@ install_command_if_not_present "lazygit" "lazygit" "brew install lazygit"
 install_command_if_not_present "lazysql" "lazysql" "brew install lazysql"
 install_command_if_not_present "zed" "Zed" "brew install --cask zed"
 install_command_if_not_present "nvim" "Neovim" "brew install neovim"
+install_command_if_not_present "shellcheck" "ShellCheck" "brew install shellcheck"
+install_command_if_not_present "bash-language-server" "Bash language server" "brew install bash-language-server"
 install_command_if_not_present "rg" "ripgrep" "brew install ripgrep"
 install_command_if_not_present "tsc" "TypeScript (with native language server)" "brew install typescript"
 install_command_if_not_present "terraform" "Terraform" "brew install hashicorp/tap/terraform"
@@ -232,26 +193,23 @@ section_end
 
 title "Installing application configuration..."
 xdg_config_dir="${XDG_CONFIG_HOME:-$HOME/.config}"
-mkdir -p "$xdg_config_dir/ghostty" "$xdg_config_dir/zed"
+crush_config_dir="${CRUSH_GLOBAL_CONFIG:-$xdg_config_dir/crush}"
+mkdir -p "$xdg_config_dir/ghostty" "$xdg_config_dir/kero" "$xdg_config_dir/zed" "$crush_config_dir"
 link_config "$DOTFILES_DIR/config/ghostty/config" "$xdg_config_dir/ghostty/config"
+link_config "$DOTFILES_DIR/config/kero/config" "$xdg_config_dir/kero/config"
 link_config "$DOTFILES_DIR/config/zed/settings.json" "$xdg_config_dir/zed/settings.json"
 link_config "$DOTFILES_DIR/config/nvim" "$xdg_config_dir/nvim"
 
-# Link the shared omp configuration into omp's native agent directory.
-omp_config_dir="${PI_CODING_AGENT_DIR:-$HOME/.omp/agent}"
-omp_dotfiles_dir="$DOTFILES_DIR/config/omp/agent"
-mkdir -p "$omp_config_dir"
-for source in "$omp_dotfiles_dir"/*; do
-    [[ -f "$source" ]] || continue
+# Remove only symlinks created by the previous OMP dotfile setup. Preserve
+# independent user configs and all backups.
+legacy_omp_dir="${PI_CODING_AGENT_DIR:-$HOME/.omp/agent}"
+remove_managed_link "$DOTFILES_DIR/config/omp/agent/config.yml" "$legacy_omp_dir/config.yml"
+remove_managed_link "$DOTFILES_DIR/config/omp/agent/config.yml.lock" "$legacy_omp_dir/config.yml.lock"
+remove_managed_link "$DOTFILES_DIR/config/omp/agent/extensions/usage-display/index.ts" \
+    "$legacy_omp_dir/extensions/usage-display/index.ts"
 
-    relative="${source#"$omp_dotfiles_dir"/}"
-    link_config "$source" "$omp_config_dir/$relative"
-done
-
-# Merge extensions without replacing unrelated local extensions or state.
-# Keep backups outside extension discovery so old code is never loaded.
-link_extension_directory "$omp_dotfiles_dir/extensions" \
-    "$omp_config_dir/extensions" "$omp_config_dir/backups/extensions"
+link_config "$DOTFILES_DIR/config/crush/crush.json" "$crush_config_dir/crush.json"
+link_config "$DOTFILES_DIR/config/crush/sandbox.mjs" "$crush_config_dir/sandbox.mjs"
 section_end
 
 title "Done! Your configuration is linked."

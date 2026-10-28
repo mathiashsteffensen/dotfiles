@@ -1,7 +1,6 @@
 # Ensure colors are enabled
 export CLICOLOR=1
 export LSCOLORS=ExFxBxDxCxegedabagacad
-export OPENCODE_ENABLE_EXA=1
 
 [ "$TERM" = xterm-ghostty ] && export TERM=xterm-256color
 
@@ -99,7 +98,7 @@ if command -v go >/dev/null 2>&1; then
 else
     export PATH="$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH"
 fi
-export PATH="${PI_INSTALL_DIR:-$HOME/.local/bin}:${BUN_INSTALL:-$HOME/.bun}/bin:$PATH"
+export PATH="${BUN_INSTALL:-$HOME/.bun}/bin:$PATH"
 export EDITOR="zed --wait"
 export VISUAL="$EDITOR"
 
