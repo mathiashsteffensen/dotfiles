@@ -13,6 +13,7 @@ This repository contains my Bash configuration files and scripts to manage them 
 - `.bash_profile` - Login shell configuration
 - `.bashrc` - Interactive shell configuration
 - `.bash_functions` - Custom helper functions
+- `.inputrc` - Readline key bindings
 - `.gitconfig` - Git global configuration
 - `.gitignore` - Global Git ignore patterns (installed as `~/.gitignore_global`)
 

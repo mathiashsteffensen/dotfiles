@@ -1,0 +1,7 @@
+# Option+Arrow moves by word.
+#
+# Terminals send these xterm sequences for Option+Arrow, and Bash has no default
+# binding for them: it drops the "\e[1" and prints ";3D" or ";3C". Ghostty hides
+# this with default keybinds that send Esc-b and Esc-f. Kero does not.
+"\e[1;3D": backward-word
+"\e[1;3C": forward-word
