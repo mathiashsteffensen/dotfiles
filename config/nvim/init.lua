@@ -33,6 +33,13 @@ require("lazy").setup({
     "Shatur/neovim-ayu",
     priority = 1000,
     config = function()
+      require("ayu").setup({
+        overrides = {
+          MiniPickMatchCurrent = { fg = "#FFFFFF", bg = "#34455C", bold = true },
+          MiniPickMatchRanges = { fg = "#FFCC66", bold = true },
+          MiniPickBorder = { fg = "#8A9199", bg = "#0B0E14" },
+        },
+      })
       vim.cmd.colorscheme("ayu-dark")
     end,
   },
