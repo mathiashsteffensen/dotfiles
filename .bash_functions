@@ -34,6 +34,59 @@ kill_grep() {
 	[[ -n "$pids" ]] && kill -9 $pids
 }
 
+# Run a command after a process matching a full-command-line regex exits.
+after() (
+	if [[ $# -ne 2 || -z "$1" || -z "$2" ]]; then
+		printf 'Usage: after <pattern> <command>\n' >&2
+		return 2
+	fi
+
+	trap 'exit 130' INT
+	trap 'exit 143' TERM
+
+	local pattern="$1" next_command="$2"
+	local matches status line pid selected self_pid
+	self_pid=$(exec /bin/bash -c 'printf "%s" "$PPID"')
+	local -a candidates=()
+
+	matches=$(pgrep -fl -- "$pattern") || {
+		status=$?
+		if [[ $status -eq 1 ]]; then
+			printf 'after: no process matches %s\n' "$pattern" >&2
+		fi
+		return "$status"
+	}
+
+	while IFS= read -r line; do
+		pid=${line%% *}
+		# Do not wait for this shell or the subshell running this function.
+		[[ "$pid" == "$$" || "$pid" == "$self_pid" ]] && continue
+		candidates+=("$line")
+	done <<< "$matches"
+
+	if [[ ${#candidates[@]} -eq 0 ]]; then
+		printf 'after: no process matches %s\n' "$pattern" >&2
+		return 1
+	elif [[ ${#candidates[@]} -eq 1 ]]; then
+		selected=${candidates[0]}
+	else
+		if ! command -v gum >/dev/null 2>&1; then
+			printf 'after: multiple matches; install Gum to select a process\n' >&2
+			return 1
+		fi
+		selected=$(gum choose "${candidates[@]}") || return $?
+		[[ -n "$selected" ]] || return 1
+	fi
+
+	pid=${selected%% *}
+	printf 'Waiting for %s\n' "$selected"
+	while kill -0 "$pid" 2>/dev/null; do
+		sleep 2 || return $?
+	done
+
+	eval "$next_command"
+)
+
 # Execute a command in each immediate subdirectory
 each-dir() {
 	local dir_name="$1"
