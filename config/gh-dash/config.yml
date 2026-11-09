@@ -1,0 +1,10 @@
+# gh-dash merges this file over its built-in defaults.
+
+pager:
+  diff: delta
+
+keybindings:
+  prs:
+    - key: T
+      name: review in tuicr
+      command: tuicr pr https://github.com/{{.RepoName}}/pull/{{.PrNumber}}

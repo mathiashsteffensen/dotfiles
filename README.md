@@ -1,6 +1,6 @@
 # Dotfiles
 
-My personal dotfiles configuration for Bash, Crush, Ghostty, Kero, Zed, and Neovim.
+My personal dotfiles configuration for Bash, Crush, Ghostty, Kero, Zed, Neovim, and gh-dash.
 
 ## Overview
 
@@ -29,6 +29,7 @@ This repository contains my Bash configuration files and scripts to manage them 
 - `config/kero/config` - Kero terminal settings
 - `config/zed/settings.json` - Zed editor settings
 - `config/nvim/` - Neovim settings and pinned plugin versions
+- `config/gh-dash/config.yml` - gh-dash diff pager and tuicr keybinding
 
 ### Crush Configuration
 
@@ -64,13 +65,14 @@ The installer also installs the tooling I regularly use from the terminal during
 - `rbenv`, `ruby-build`, and the latest stable Ruby
 - Ruby LSP via RubyGems
 - lazygit
+- GitHub CLI (`gh`) with the gh-dash extension, delta, and tuicr for pull request review
 - lazysql
 - Zed and Neovim text editors
 - Node.js runtime
 - Neovim language servers for JavaScript/TypeScript, Terraform, Dockerfiles, HTML/CSS/JSON, YAML, and Helm
 - Terraform and Helm CLIs, Prettier, and ripgrep
 
-The installer links Ghostty, Kero, Zed, and Neovim settings under `${XDG_CONFIG_HOME:-$HOME/.config}`. It installs `rbenv`, `ruby-build`, and the latest stable Ruby known to `ruby-build`, then selects it as rbenv’s global default. Zed is configured to automatically install its Ruby and Terraform extensions; TypeScript and Go support are built in. The installer also installs `gopls`, `ruby-lsp`, RuboCop, and a standalone `terraform-ls` for Neovim. Existing files and directories are backed up as `.bak` (or `.bak.1`, `.bak.2`, etc. when needed) before being replaced with symbolic links.
+The installer links Ghostty, Kero, Zed, Neovim, and gh-dash settings under `${XDG_CONFIG_HOME:-$HOME/.config}`. It installs `rbenv`, `ruby-build`, and the latest stable Ruby known to `ruby-build`, then selects it as rbenv’s global default. Zed is configured to automatically install its Ruby and Terraform extensions; TypeScript and Go support are built in. The installer also installs `gopls`, `ruby-lsp`, RuboCop, and a standalone `terraform-ls` for Neovim. Existing files and directories are backed up as `.bak` (or `.bak.1`, `.bak.2`, etc. when needed) before being replaced with symbolic links.
 
 Kero's configuration enables a Tailscale listener on port 7373. By default, Kero permits connections from the Tailscale user who owns the machine; authorized connections can run programs as the local account.
 
@@ -142,6 +144,17 @@ Core Vim motions and editing commands are retained. These shortcuts add IDE feat
 | `Ctrl-n` / `Ctrl-p` / `Ctrl-y` / `Ctrl-e` | Next / previous / accept / dismiss completion               |
 
 Searches use the current working directory, so launch Neovim from the project root. `:Explore` opens the built-in file browser. `:Tutor` starts the interactive Vim tutorial; `:checkhealth vim.lsp` and `:ConformInfo` diagnose language servers and formatters. No Nerd Font, tmux, or GUI is required. Filetype syntax highlighting uses Neovim's runtime plus `vim-helm`; there is no Treesitter parser installation to maintain.
+
+### Pull request review
+
+Sign in once with `gh auth login`; gh-dash and tuicr both use that login. Run `gh dash` to see the pull requests that need your review. In the pull request list:
+
+| Key | Action                               |
+| --- | ------------------------------------ |
+| `T` | Review the selected PR in tuicr      |
+| `d` | Show the selected PR's diff in delta |
+
+In tuicr, `c` comments on a line, `v` selects a range to comment on, and `:submit` posts all comments as one GitHub review: comment, approve, request changes, or draft. Quit tuicr to return to gh-dash. To skip the dashboard, run `tuicr pr <number>` in a checkout or `tuicr pr <url>` anywhere.
 
 ## Local Configuration Management
 

@@ -112,6 +112,17 @@ function install_ruby_gem_if_not_present() {
     fi
 }
 
+function install_gh_extension_if_not_present() {
+    local repository="$1"
+    local installed_extensions
+
+    installed_extensions="$(gh extension list 2>/dev/null || true)"
+    if [[ "$installed_extensions" != *"$repository"* ]]; then
+        title "Installing $repository..."
+        gh extension install "$repository"
+    fi
+}
+
 function install_latest_ruby_if_not_present() {
     local latest_ruby
     local rbenv_root
@@ -155,6 +166,10 @@ else
     echo "Skipping ruby-lsp: RubyGems is not installed."
 fi
 install_command_if_not_present "lazygit" "lazygit" "brew install lazygit"
+install_command_if_not_present "gh" "GitHub CLI" "brew install gh"
+install_gh_extension_if_not_present "dlvhdr/gh-dash"
+install_command_if_not_present "delta" "delta" "brew install git-delta"
+install_command_if_not_present "tuicr" "tuicr" "brew install tuicr"
 install_command_if_not_present "lazysql" "lazysql" "brew install lazysql"
 install_command_if_not_present "zed" "Zed" "brew install --cask zed"
 install_command_if_not_present "nvim" "Neovim" "brew install neovim"
@@ -194,11 +209,12 @@ section_end
 title "Installing application configuration..."
 xdg_config_dir="${XDG_CONFIG_HOME:-$HOME/.config}"
 crush_config_dir="${CRUSH_GLOBAL_CONFIG:-$xdg_config_dir/crush}"
-mkdir -p "$xdg_config_dir/ghostty" "$xdg_config_dir/kero" "$xdg_config_dir/zed" "$crush_config_dir"
+mkdir -p "$xdg_config_dir/ghostty" "$xdg_config_dir/kero" "$xdg_config_dir/zed" "$xdg_config_dir/gh-dash" "$crush_config_dir"
 link_config "$DOTFILES_DIR/config/ghostty/config" "$xdg_config_dir/ghostty/config"
 link_config "$DOTFILES_DIR/config/kero/config" "$xdg_config_dir/kero/config"
 link_config "$DOTFILES_DIR/config/zed/settings.json" "$xdg_config_dir/zed/settings.json"
 link_config "$DOTFILES_DIR/config/nvim" "$xdg_config_dir/nvim"
+link_config "$DOTFILES_DIR/config/gh-dash/config.yml" "$xdg_config_dir/gh-dash/config.yml"
 
 # Remove only symlinks created by the previous OMP dotfile setup. Preserve
 # independent user configs and all backups.
