@@ -2,12 +2,16 @@ command = /bin/bash
 
 background = meadow
 window-translucent = true
-window-theme = system
+window-theme = dark
+dim-unfocused-terminals = true
+font-family = Fira Code
 font-size = 13
+font-weight = 500
+font-thicken = false
 
 listen = tailnet://:7373
 
+keybind = cmd+shift+f=find.open
 keybind = cmd+right=pane.split.right
 keybind = cmd+down=pane.split.down
 keybind = cmd+f=pane.zoom
-keybind = cmd+shift+f=find.open
