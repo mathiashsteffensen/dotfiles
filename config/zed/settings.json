@@ -80,6 +80,10 @@
     "terraform": true,
   },
   "languages": {
+    "Shell Script": {
+      "tab_size": 2,
+      "hard_tabs": false,
+    },
     "Ruby": {
       "language_servers": ["ruby-lsp", "rubocop", "!solargraph", "..."],
       "format_on_save": "on",
@@ -111,6 +115,7 @@
     "trust_all_worktrees": true,
   },
   "base_keymap": "JetBrains",
+  "vim_mode": true,
   "terminal": {
     "font_size": 13.0,
   },

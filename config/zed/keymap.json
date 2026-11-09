@@ -1,0 +1,8 @@
+[
+  {
+    "context": "Editor && vim_mode == normal && (language == Go || language == Ruby)",
+    "bindings": {
+      "shift-t": ["task::Spawn", { "task_name": "Go to test file" }]
+    }
+  }
+]

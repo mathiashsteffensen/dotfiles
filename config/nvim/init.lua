@@ -1,4 +1,4 @@
--- Keep Vim's editing keys; Space prefixes the few editor-specific shortcuts.
+-- Space prefixes editor shortcuts; T opens the current Go or Ruby test file.
 vim.g.mapleader = " "
 vim.g.maplocalleader = " "
 vim.opt.number = true
@@ -86,6 +86,30 @@ vim.lsp.enable({
   "dockerls", "html", "cssls", "jsonls", "yamlls", "helm_ls", "bashls",
 })
 vim.diagnostic.config({ severity_sort = true, underline = true, virtual_text = true })
+
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = { "go", "ruby" },
+  callback = function(event)
+    vim.keymap.set("n", "T", function()
+      local path = vim.api.nvim_buf_get_name(0)
+      local target
+      if vim.bo.filetype == "go" then
+        if path:match("_test%.go$") then
+          return
+        end
+        target = path:gsub("%.go$", "_test.go")
+      else
+        local root = vim.fs.root(0, { ".git", "Gemfile" }) or vim.fn.getcwd()
+        local relative = vim.fs.relpath(root, path)
+        if not relative or not (relative:match("^app/") or relative:match("^lib/")) then
+          return
+        end
+        target = root .. "/specs/" .. relative:sub(5):gsub("%.rb$", "_test.rb")
+      end
+      vim.cmd.edit(vim.fn.fnameescape(target))
+    end, { buffer = event.buf, desc = "Go to test file" })
+  end,
+})
 
 vim.api.nvim_create_autocmd("LspAttach", {
   callback = function(event)

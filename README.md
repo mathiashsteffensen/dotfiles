@@ -133,7 +133,7 @@ Language support uses Neovim's built-in LSP client with [nvim-lspconfig](https:/
 
 Ruby executables come from the active rbenv version, without a `bundle exec` wrapper, matching Zed's launch behavior. Install `ruby-lsp` and `rubocop` for each Ruby version you use. Ruby LSP can manage its own bundle internally. RuboCop alone owns Ruby linting and save formatting to avoid duplicate diagnostics/formatters. Prettier prefers a project's local installation when available. Helm file associations preserve Zed's `templates/**/*.tpl`, `templates/**/*.yaml`, and `templates/**/*.yml` patterns.
 
-Core Vim motions and editing commands are retained. These shortcuts add IDE features (`Space` is the leader):
+Vim editing commands are retained except `T`, which opens the Go or Ruby test file in normal mode. Zed also enables Vim mode and uses the same shortcut: `file.go` → `file_test.go`, and `app/path/file.rb` or `lib/path/file.rb` → `specs/path/file_test.rb`. Existing test files stay open. These shortcuts add IDE features (`Space` is the leader):
 
 | Keys                                      | Action                                                      |
 | ----------------------------------------- | ----------------------------------------------------------- |

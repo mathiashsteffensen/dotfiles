@@ -1,0 +1,11 @@
+[
+  {
+    "label": "Go to test file",
+    "command": "bash \"${XDG_CONFIG_HOME:-$HOME/.config}/zed/go-to-test.sh\"",
+    "reveal": "never",
+    "hide": "on_success",
+    "show_summary": false,
+    "show_command": false,
+    "save": "none"
+  }
+]
