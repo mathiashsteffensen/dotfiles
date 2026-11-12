@@ -3,6 +3,12 @@
 pager:
   diff: delta
 
+# Where PR checkout (and RepoPath in keybindings) finds local clones.
+repoPaths:
+  mathiashsteffensen/*: ~/code/*
+  quantrading-dev/*: ~/code/*
+  Driversnote-Dev/*: ~/code/*
+
 keybindings:
   prs:
     - key: T
