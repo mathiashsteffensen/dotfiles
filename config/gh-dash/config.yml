@@ -14,3 +14,6 @@ keybindings:
     - key: T
       name: review in tuicr
       command: tuicr pr https://github.com/{{.RepoName}}/pull/{{.PrNumber}}
+    - key: E
+      name: checks and logs in ENHANCE
+      command: gh enhance -R {{.RepoName}} {{.PrNumber}}

@@ -1,72 +1,14 @@
 {
+  "ui_font_family": "Fira Code",
+  "ui_font_weight": 500.0,
+  "disable_ai": false,
   "git": {
-    "diff_base": "head"
-  },
-  "agent": {
-    "sandbox_permissions": {
-      "allow_unsandboxed": true
-    },
-    "profiles": {
-      "sandbox": {
-        "name": "Sandbox",
-        "tools": {},
-        "enable_all_context_servers": false,
-        "context_servers": {}
-      }
-    },
-    "default_model": {
-      "effort": "high",
-      "provider": "openrouter",
-      "model": "deepseek/deepseek-v4.1-flash-1017",
-      "enable_thinking": true
-    },
-    "favorite_models": [
-      {
-        "provider": "openrouter",
-        "model": "deepseek/deepseek-v4.1-flash-1017",
-        "enable_thinking": true,
-        "effort": "high"
-      },
-      {
-        "provider": "lmstudio",
-        "model": "qwen/qwen3.6-35b-a3b",
-        "enable_thinking": false
-      },
-      {
-        "provider": "openai-subscribed",
-        "model": "gpt-6-astra",
-        "enable_thinking": true,
-        "effort": "medium"
-      },
-      {
-        "provider": "openai-subscribed",
-        "model": "gpt-6.1-sol",
-        "enable_thinking": true,
-        "effort": "low"
-      },
-      {
-        "provider": "openai-subscribed",
-        "model": "gpt-6-luna",
-        "enable_thinking": true,
-        "effort": "medium"
-      }
-    ],
-    "model_parameters": [],
-    "show_turn_stats": true
-  },
-  "agent_servers": {
-    "julia": {
-      "args": [
-        "--prompt"
-      ],
-      "type": "custom",
-      "command": "/Users/mathias/go/bin/julia"
-    }
+    "diff_base": "head",
   },
   "proxy": "",
   "edit_predictions": {
     "zed": {
-      "prediction_debounce": 100
+      "prediction_debounce": 400,
     },
     "provider": "zed",
   },
@@ -121,9 +63,9 @@
     "font_size": 13.0,
     "font_weight": 500,
   },
-  "ui_font_size": 14.0,
+  "ui_font_size": 13.0,
   "buffer_font_family": "Fira Code",
-  "buffer_font_size": 14.0,
+  "buffer_font_size": 12.0,
   "buffer_font_weight": 500,
   "theme": {
     "mode": "dark",

@@ -1,6 +1,6 @@
 # Dotfiles
 
-My personal dotfiles configuration for Bash, Crush, Ghostty, Kero, Zed, Neovim, and gh-dash.
+My personal dotfiles configuration for Bash, Ghostty, Kero, Zed, Neovim, and gh-dash.
 
 ## Overview
 
@@ -29,12 +29,7 @@ This repository contains my Bash configuration files and scripts to manage them 
 - `config/kero/config` - Kero terminal settings
 - `config/zed/settings.json` - Zed editor settings
 - `config/nvim/` - Neovim settings and pinned plugin versions
-- `config/gh-dash/config.yml` - gh-dash diff pager and tuicr keybinding
-
-### Crush Configuration
-
-- `config/crush/crush.json` - Default OpenAI ChatGPT model and sandbox-only tool configuration
-- `config/crush/sandbox.mjs` - macOS sandbox MCP extension with independent escalation review
+- `config/gh-dash/config.yml` - gh-dash diff pager and keybindings for tuicr and ENHANCE
 
 ## Installation
 
@@ -59,13 +54,13 @@ This repository contains my Bash configuration files and scripts to manage them 
 
 The installer also installs the tooling I regularly use from the terminal during my development workflow:
 
-- [Crush coding harness](https://github.com/charmbracelet/crush)
+- [JULIA coding harness](https://github.com/mathiashsteffensen/julia-cli), built from source
 - Ghostty and Kero terminals
 - Go compiler and `gopls`
 - `rbenv`, `ruby-build`, and the latest stable Ruby
 - Ruby LSP via RubyGems
 - lazygit
-- GitHub CLI (`gh`) with the gh-dash extension, delta, and tuicr for pull request review
+- GitHub CLI (`gh`) with the gh-dash and gh-enhance extensions, delta, and tuicr for pull request review
 - lazysql
 - Zed and Neovim text editors
 - Node.js runtime
@@ -76,41 +71,7 @@ The installer links Ghostty, Kero, Zed, Neovim, and gh-dash settings under `${XD
 
 Kero's configuration enables a Tailscale listener on port 7373. By default, Kero permits connections from the Tailscale user who owns the machine; authorized connections can run programs as the local account.
 
-When Crush is missing, the installer uses the official Homebrew tap, then links the global Crush config and sandbox extension under `${CRUSH_GLOBAL_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/crush}`. The config selects `gpt-6-astra` through the OpenAI/ChatGPT provider. After installation, sign in with `crush login openai` to use a ChatGPT subscription for the main agent. The installer removes only symlinks created by the previous OMP setup and preserves independent configuration and backups.
-
-### Sandbox and automatic escalation review
-
-Requires macOS, `/usr/bin/sandbox-exec`, and Node.js 22 or newer. Launch Crush from a trusted project directory, not your home directory. The `sandbox` MCP extension replaces host filesystem, shell, web, subagent and LSP tools with one sandboxed `execute` tool. Automatic LSP discovery is disabled. No extension dependencies are needed. The previous `crushout` hook is no longer registered.
-
-Routine commands run without review, can write within the initial project directory and a private temporary directory, and cannot use the network. Child commands inherit Seatbelt restrictions. Standard configuration paths, Git metadata, agent instructions and extension code cannot be written. Commands receive a minimal environment without API keys, and HOME points to private scratch space. Commands time out after 60 seconds by default (maximum 300); output is bounded and background descendants are killed on completion. Failed commands are never automatically retried because they may already have produced side effects.
-
-An explicit `escalation` can request network access or additional absolute writable roots. Only this exact call is reviewed, with its command, cwd, requested capabilities and a trusted intent supplied when starting Crush. Network grants permit arbitrary destinations, not a domain allowlist. Escalation never disables Seatbelt. Only low/medium-risk approvals execute. Denials, malformed responses, missing credentials, review timeouts and audit failures block execution. Three consecutive denials or ten denials in the last fifty reviews stop further escalations until the MCP session restarts. Routine sandboxed work remains available.
-
-The reviewer defaults to **`openai/gpt-6-luna` through your existing Crush subscription login**. No separate API key or endpoint is needed. Each review runs a fresh, tool-free local Crush process with isolated workspace/configuration and the original global OAuth store, preserving Crush's cross-process token refresh locking. It does not reuse the main agent session or recursively start the sandbox MCP server. Shared machine/system configuration containing hooks, MCP or LSP entries is rejected rather than inherited unsafely.
-
-```bash
-crush login openai
-export CRUSH_REVIEW_INTENT='Run the project tests and download missing public dependencies; do not upload project data.'
-crush
-```
-
-`CRUSH_REVIEW_INTENT` is optional: without it the reviewer permits only routine, non-destructive development work and has no authorization for uploads of private data, credentials, publishing, deployment or security changes. Set `CRUSH_REVIEW_MODEL=provider/model` to override Luna, or `CRUSH_REVIEW_BIN` to choose a Crush executable. Review calls consume subscription usage; authentication/model errors and the 45-second deadline block escalation. The reviewer receives the proposed command, so do not include secrets in command text. Crush also receives that prompt as a process argument. The reviewer has no tools or conversation transcript; trusted intent remains fixed for the MCP session. Temporary reviewer workspace/session files are removed after each call.
-
-An optional separate API backend remains available: setting `CRUSH_REVIEW_URL` selects a complete HTTPS OpenAI-compatible Chat Completions endpoint and then requires `CRUSH_REVIEW_MODEL`, `CRUSH_REVIEW_API_KEY` and `CRUSH_REVIEW_INTENT`. That backend requires JSON response format and temperature 0. Keep keys out of tracked files. Reviewer environment variables are not passed to sandboxed commands.
-
-Review records contain timestamps, request hashes, risk and rationale, not raw commands. They are stored in `${XDG_STATE_HOME:-$HOME/.local/state}/crush-sandbox/` with private permissions. Scratch directories remain in the system temporary directory after exit; do not use them for durable storage. There is no automatic human override or desktop-style review panel; denied calls report a reason to Crush.
-
-**Security boundary:** this contains extension-launched commands, not the Crush host process. File reads are broadly permitted for runtime compatibility, with standard SSH, AWS, GPG, Keychain and Crush credential directories denied; this is not comprehensive secret isolation. Repository `.env` files and credentials outside those standard paths can still be readable. Network escalation can expose readable data if the reviewer misjudges a command. LLM approval is not a security guarantee. Only open trusted projects: Crush loads project configuration and context before this extension runs. Additional MCP servers, explicit LSP configurations, project overrides, hooks or newly added built-in tools can bypass the intended tool restriction and must be audited. This configuration targets Crush v0.97.1; inspect effective tools after upgrades. It is deliberately not presented as a full port of Codex's host-integrated security boundary.
-
-Run the regression checks with:
-
-```bash
-node --test tests/crush-sandbox.test.mjs
-bash tests/shell.test.sh
-bash -n install.sh
-```
-
-The Node suite includes real macOS sandbox checks for writes, symlinks, descendants, network denial, protected paths and timeouts, plus broker/MCP tests. On other platforms the real sandbox tests are skipped and the extension refuses to start.
+When `julia` is missing from Go's bin directory, the installer clones julia-cli to `~/code/julia-cli`, or uses the checkout already there, and builds it with `go install ./cmd/julia`. After installation, run `julia doctor` to check the setup.
 
 ### Neovim
 
@@ -147,14 +108,17 @@ Searches use the current working directory, so launch Neovim from the project ro
 
 ### Pull request review
 
-Sign in once with `gh auth login`; gh-dash and tuicr both use that login. Run `gh dash` to see the pull requests that need your review. In the pull request list:
+Sign in once with `gh auth login`; gh-dash, tuicr, and ENHANCE all use that login. Run `gh dash` to see the pull requests that need your review. In the pull request list:
 
-| Key | Action                               |
-| --- | ------------------------------------ |
-| `T` | Review the selected PR in tuicr      |
-| `d` | Show the selected PR's diff in delta |
+| Key | Action                                            |
+| --- | ------------------------------------------------- |
+| `T` | Review the selected PR in tuicr                   |
+| `E` | Show the selected PR's checks and logs in ENHANCE |
+| `d` | Show the selected PR's diff in delta              |
 
 In tuicr, `c` comments on a line, `v` selects a range to comment on, and `:submit` posts all comments as one GitHub review: comment, approve, request changes, or draft. Quit tuicr to return to gh-dash. To skip the dashboard, run `tuicr pr <number>` in a checkout or `tuicr pr <url>` anywhere.
+
+In ENHANCE, `h` and `l` move between the run, job, step, and log panes, and `/` searches the focused pane. `Ctrl-r` reruns the selected run or job, `o` opens the selection in the browser, and `?` lists all keys. Quit ENHANCE to return to gh-dash.
 
 ## Local Configuration Management
 

@@ -75,9 +75,7 @@ function initialize_homebrew() {
     fi
 }
 
-function install_go_tool_if_not_present() {
-    local cmd_name="$1"
-    local module="$2"
+function go_bin_dir() {
     local go_bin_dir
 
     go_bin_dir="$(go env GOBIN)"
@@ -85,20 +83,35 @@ function install_go_tool_if_not_present() {
         go_bin_dir="$(go env GOPATH)/bin"
     fi
 
-    if [[ ! -x "$go_bin_dir/$cmd_name" ]]; then
+    printf '%s\n' "$go_bin_dir"
+}
+
+function install_go_tool_if_not_present() {
+    local cmd_name="$1"
+    local module="$2"
+
+    if [[ ! -x "$(go_bin_dir)/$cmd_name" ]]; then
         title "Installing $cmd_name..."
         go install "$module"
     fi
 }
 
-function remove_managed_link() {
-    local source="$1"
-    local target="$2"
+# JULIA's Go module path is not its repository URL, so `go install <repository>@latest`
+# cannot fetch it. Build it from a checkout instead.
+function install_julia_if_not_present() {
+    local checkout_dir="$HOME/code/julia-cli"
 
-    if [[ -L "$target" && "$(readlink "$target")" == "$source" ]]; then
-        echo "Removing retired dotfile link $target"
-        rm "$target"
+    if [[ -x "$(go_bin_dir)/julia" ]]; then
+        return
     fi
+
+    title "Installing JULIA..."
+
+    if [[ ! -d "$checkout_dir" ]]; then
+        git clone git@github.com:mathiashsteffensen/julia-cli.git "$checkout_dir"
+    fi
+
+    go install -C "$checkout_dir" ./cmd/julia
 }
 
 function install_ruby_gem_if_not_present() {
@@ -147,12 +160,12 @@ export PATH="${BUN_INSTALL:-$HOME/.bun}/bin:$PATH"
 initialize_homebrew
 install_command_if_not_present "brew" "Homebrew" "curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | sh"
 initialize_homebrew
-install_command_if_not_present "crush" "Crush" "brew install charmbracelet/tap/crush"
 install_command_if_not_present "ghostty" "Ghostty" "brew install --cask ghostty"
 install_command_if_not_present "kero" "Kero" "brew install --cask kero"
 install_command_if_not_present "go" "Go" "brew install go"
 install_command_if_not_present "node" "Node.js" "brew install node"
 install_go_tool_if_not_present "gopls" "golang.org/x/tools/gopls@latest"
+install_julia_if_not_present
 install_command_if_not_present "rbenv" "rbenv" "brew install rbenv"
 install_command_if_not_present "ruby-build" "ruby-build" "brew install ruby-build"
 eval "$(rbenv init - --no-rehash bash)"
@@ -168,6 +181,7 @@ fi
 install_command_if_not_present "lazygit" "lazygit" "brew install lazygit"
 install_command_if_not_present "gh" "GitHub CLI" "brew install gh"
 install_gh_extension_if_not_present "dlvhdr/gh-dash"
+install_gh_extension_if_not_present "dlvhdr/gh-enhance"
 install_command_if_not_present "delta" "delta" "brew install git-delta"
 install_command_if_not_present "tuicr" "tuicr" "brew install tuicr"
 install_command_if_not_present "lazysql" "lazysql" "brew install lazysql"
@@ -208,8 +222,7 @@ section_end
 
 title "Installing application configuration..."
 xdg_config_dir="${XDG_CONFIG_HOME:-$HOME/.config}"
-crush_config_dir="${CRUSH_GLOBAL_CONFIG:-$xdg_config_dir/crush}"
-mkdir -p "$xdg_config_dir/ghostty" "$xdg_config_dir/kero" "$xdg_config_dir/zed" "$xdg_config_dir/gh-dash" "$crush_config_dir"
+mkdir -p "$xdg_config_dir/ghostty" "$xdg_config_dir/kero" "$xdg_config_dir/zed" "$xdg_config_dir/gh-dash"
 link_config "$DOTFILES_DIR/config/ghostty/config" "$xdg_config_dir/ghostty/config"
 link_config "$DOTFILES_DIR/config/kero/config" "$xdg_config_dir/kero/config"
 link_config "$DOTFILES_DIR/config/zed/settings.json" "$xdg_config_dir/zed/settings.json"
@@ -218,17 +231,6 @@ link_config "$DOTFILES_DIR/config/zed/tasks.json" "$xdg_config_dir/zed/tasks.jso
 link_config "$DOTFILES_DIR/config/zed/go-to-test.sh" "$xdg_config_dir/zed/go-to-test.sh"
 link_config "$DOTFILES_DIR/config/nvim" "$xdg_config_dir/nvim"
 link_config "$DOTFILES_DIR/config/gh-dash/config.yml" "$xdg_config_dir/gh-dash/config.yml"
-
-# Remove only symlinks created by the previous OMP dotfile setup. Preserve
-# independent user configs and all backups.
-legacy_omp_dir="${PI_CODING_AGENT_DIR:-$HOME/.omp/agent}"
-remove_managed_link "$DOTFILES_DIR/config/omp/agent/config.yml" "$legacy_omp_dir/config.yml"
-remove_managed_link "$DOTFILES_DIR/config/omp/agent/config.yml.lock" "$legacy_omp_dir/config.yml.lock"
-remove_managed_link "$DOTFILES_DIR/config/omp/agent/extensions/usage-display/index.ts" \
-    "$legacy_omp_dir/extensions/usage-display/index.ts"
-
-link_config "$DOTFILES_DIR/config/crush/crush.json" "$crush_config_dir/crush.json"
-link_config "$DOTFILES_DIR/config/crush/sandbox.mjs" "$crush_config_dir/sandbox.mjs"
 section_end
 
 title "Done! Your configuration is linked."
