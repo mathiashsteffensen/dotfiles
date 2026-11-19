@@ -222,7 +222,9 @@ section_end
 
 title "Installing application configuration..."
 xdg_config_dir="${XDG_CONFIG_HOME:-$HOME/.config}"
-mkdir -p "$xdg_config_dir/ghostty" "$xdg_config_dir/kero" "$xdg_config_dir/zed" "$xdg_config_dir/gh-dash"
+# On macOS lazygit reads ~/Library/Application Support unless XDG_CONFIG_HOME is set.
+lazygit_config_dir="$(lazygit --print-config-dir)"
+mkdir -p "$xdg_config_dir/ghostty" "$xdg_config_dir/kero" "$xdg_config_dir/zed" "$xdg_config_dir/gh-dash" "$lazygit_config_dir"
 link_config "$DOTFILES_DIR/config/ghostty/config" "$xdg_config_dir/ghostty/config"
 link_config "$DOTFILES_DIR/config/kero/config" "$xdg_config_dir/kero/config"
 link_config "$DOTFILES_DIR/config/zed/settings.json" "$xdg_config_dir/zed/settings.json"
@@ -231,6 +233,7 @@ link_config "$DOTFILES_DIR/config/zed/tasks.json" "$xdg_config_dir/zed/tasks.jso
 link_config "$DOTFILES_DIR/config/zed/go-to-test.sh" "$xdg_config_dir/zed/go-to-test.sh"
 link_config "$DOTFILES_DIR/config/nvim" "$xdg_config_dir/nvim"
 link_config "$DOTFILES_DIR/config/gh-dash/config.yml" "$xdg_config_dir/gh-dash/config.yml"
+link_config "$DOTFILES_DIR/config/lazygit/config.yml" "$lazygit_config_dir/config.yml"
 section_end
 
 title "Done! Your configuration is linked."

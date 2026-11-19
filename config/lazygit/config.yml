@@ -1,0 +1,34 @@
+git:
+  diffRenderers:
+    - colorArg: always
+      command: delta --dark --paging=never --line-numbers --hyperlinks
+
+keybinding:
+  branches:
+    # T reviews the pull request (customCommands below). <ctrl+t> wins over "Open external diff tool" here.
+    createTag: <ctrl+t>
+
+customCommands:
+  - key: T
+    context: localBranches
+    description: Review pull request in tuicr
+    command: 'pr_url=$(gh pr view {{.SelectedLocalBranch.Name | quote}} --json url --jq .url) && tuicr pr "$pr_url"'
+    output: terminal
+
+  # <ctrl+m> needs a terminal with the kitty keyboard protocol, such as Ghostty; elsewhere it is Enter.
+  - key: <ctrl+m>
+    context: localBranches
+    description: Merge pull request
+    prompts:
+      - type: menu
+        title: "Merge the pull request of {{.SelectedLocalBranch.Name}}?"
+        key: MergeMethod
+        options:
+          - name: Create a merge commit
+            value: --merge
+          - name: Squash and merge
+            value: --squash
+          - name: Rebase and merge
+            value: --rebase
+    command: "gh pr merge {{.SelectedLocalBranch.Name | quote}} {{.Form.MergeMethod}}"
+    output: terminal

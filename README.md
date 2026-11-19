@@ -1,6 +1,6 @@
 # Dotfiles
 
-My personal dotfiles configuration for Bash, Ghostty, Kero, Zed, Neovim, and gh-dash.
+My personal dotfiles configuration for Bash, Ghostty, Kero, Zed, Neovim, gh-dash, and lazygit.
 
 ## Overview
 
@@ -30,6 +30,7 @@ This repository contains my Bash configuration files and scripts to manage them 
 - `config/zed/settings.json` - Zed editor settings
 - `config/nvim/` - Neovim settings and pinned plugin versions
 - `config/gh-dash/config.yml` - gh-dash diff pager and keybindings for tuicr and ENHANCE
+- `config/lazygit/config.yml` - lazygit diff pager and keybindings for tuicr, PR merge, and New tag
 
 ## Installation
 
@@ -67,7 +68,7 @@ The installer also installs the tooling I regularly use from the terminal during
 - Neovim language servers for JavaScript/TypeScript, Terraform, Dockerfiles, HTML/CSS/JSON, YAML, and Helm
 - Terraform and Helm CLIs, Prettier, and ripgrep
 
-The installer links Ghostty, Kero, Zed, Neovim, and gh-dash settings under `${XDG_CONFIG_HOME:-$HOME/.config}`. It installs `rbenv`, `ruby-build`, and the latest stable Ruby known to `ruby-build`, then selects it as rbenv’s global default. Zed is configured to automatically install its Ruby and Terraform extensions; TypeScript and Go support are built in. The installer also installs `gopls`, `ruby-lsp`, RuboCop, and a standalone `terraform-ls` for Neovim. Existing files and directories are backed up as `.bak` (or `.bak.1`, `.bak.2`, etc. when needed) before being replaced with symbolic links.
+The installer links Ghostty, Kero, Zed, Neovim, and gh-dash settings under `${XDG_CONFIG_HOME:-$HOME/.config}`. It links lazygit settings into the directory that `lazygit --print-config-dir` reports; on macOS that is `~/Library/Application Support/lazygit` unless `XDG_CONFIG_HOME` is set. It installs `rbenv`, `ruby-build`, and the latest stable Ruby known to `ruby-build`, then selects it as rbenv’s global default. Zed is configured to automatically install its Ruby and Terraform extensions; TypeScript and Go support are built in. The installer also installs `gopls`, `ruby-lsp`, RuboCop, and a standalone `terraform-ls` for Neovim. Existing files and directories are backed up as `.bak` (or `.bak.1`, `.bak.2`, etc. when needed) before being replaced with symbolic links.
 
 Kero's configuration enables a Tailscale listener on port 7373. By default, Kero permits connections from the Tailscale user who owns the machine; authorized connections can run programs as the local account.
 
@@ -119,6 +120,16 @@ Sign in once with `gh auth login`; gh-dash, tuicr, and ENHANCE all use that logi
 In tuicr, `c` comments on a line, `v` selects a range to comment on, and `:submit` posts all comments as one GitHub review: comment, approve, request changes, or draft. Quit tuicr to return to gh-dash. To skip the dashboard, run `tuicr pr <number>` in a checkout or `tuicr pr <url>` anywhere.
 
 In ENHANCE, `h` and `l` move between the run, job, step, and log panes, and `/` searches the focused pane. `Ctrl-r` reruns the selected run or job, `o` opens the selection in the browser, and `?` lists all keys. Quit ENHANCE to return to gh-dash.
+
+In lazygit, these keys act on the selected branch in the Local branches panel:
+
+| Key      | Action                                                            |
+| -------- | ----------------------------------------------------------------- |
+| `T`      | Review the branch's PR in tuicr                                   |
+| `Ctrl-m` | Merge the branch's PR with `gh pr merge`                          |
+| `Ctrl-t` | New tag, moved from `T`; replaces the external diff tool key here |
+
+The PR is the branch's open one, or else the most recent. Quit tuicr, then press Enter to return to lazygit. `Ctrl-m` asks for the merge method, which is also the confirmation; Esc cancels. It needs a terminal with the kitty keyboard protocol, such as Ghostty. In other terminals `Ctrl-m` is Enter; run the command from the `?` menu there.
 
 ## Local Configuration Management
 
