@@ -1,4 +1,7 @@
 {
+  "markdown_preview": {
+    "font_family": "Fira Code"
+  },
   "ui_font_family": "Fira Code",
   "ui_font_weight": 500.0,
   "disable_ai": false,
