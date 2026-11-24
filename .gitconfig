@@ -2,7 +2,6 @@
 	defaultBranch = master
 
 [core]
-	editor = zed --wait
 	excludesfile = ~/.gitignore_global
 
 # Include a local config that isn't tracked in git.

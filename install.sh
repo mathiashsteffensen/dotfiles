@@ -17,6 +17,10 @@ function section_end() {
     echo ""
 }
 
+function is_macos() {
+    [[ "$OSTYPE" == darwin* ]]
+}
+
 function link_config() {
     local source="$1"
     local target="$2"
@@ -62,7 +66,7 @@ function initialize_homebrew() {
     local brew_prefix
 
     if ! command -v brew >/dev/null 2>&1; then
-        for brew_prefix in /opt/homebrew /usr/local; do
+        for brew_prefix in /opt/homebrew /usr/local /home/linuxbrew/.linuxbrew; do
             if [[ -x "$brew_prefix/bin/brew" ]]; then
                 export PATH="$brew_prefix/bin:$PATH"
                 break
@@ -136,6 +140,15 @@ function install_gh_extension_if_not_present() {
     fi
 }
 
+# Homebrew's Linux requirements (https://docs.brew.sh/Homebrew-on-Linux#requirements) and
+# ruby-build's suggested Ubuntu build environment (https://github.com/rbenv/ruby-build/wiki).
+function install_linux_build_packages() {
+    title "Installing Linux build packages..."
+    sudo apt-get update
+    sudo apt-get install -y build-essential procps curl file git \
+        autoconf libssl-dev libyaml-dev zlib1g-dev libffi-dev libgmp-dev rustc
+}
+
 function install_latest_ruby_if_not_present() {
     local latest_ruby
     local rbenv_root
@@ -149,7 +162,12 @@ function install_latest_ruby_if_not_present() {
     rbenv_root="$(rbenv root)"
     if [[ ! -d "$rbenv_root/versions/$latest_ruby" ]]; then
         title "Installing Ruby $latest_ruby..."
-        rbenv install "$latest_ruby"
+        if is_macos; then
+            rbenv install "$latest_ruby"
+        else
+            # Homebrew's OpenSSL and libyaml are not on Linux's runtime library path, so build against Ubuntu's.
+            RUBY_CONFIGURE_OPTS="--with-openssl-dir=/usr --with-libyaml-dir=/usr" rbenv install "$latest_ruby"
+        fi
     fi
 
     rbenv global "$latest_ruby"
@@ -157,15 +175,25 @@ function install_latest_ruby_if_not_present() {
 
 title "Installing development tooling..."
 export PATH="${BUN_INSTALL:-$HOME/.bun}/bin:$PATH"
+if ! is_macos; then
+    install_linux_build_packages
+fi
 initialize_homebrew
-install_command_if_not_present "brew" "Homebrew" "curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | sh"
+install_command_if_not_present "brew" "Homebrew" 'installer="$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" && /bin/bash -c "$installer"'
 initialize_homebrew
-install_command_if_not_present "ghostty" "Ghostty" "brew install --cask ghostty"
-install_command_if_not_present "kero" "Kero" "brew install --cask kero"
+if is_macos; then
+    install_command_if_not_present "ghostty" "Ghostty" "brew install --cask ghostty"
+    install_command_if_not_present "kero" "Kero" "brew install --cask kero"
+    install_command_if_not_present "zed" "Zed" "brew install --cask zed"
+fi
 install_command_if_not_present "go" "Go" "brew install go"
 install_command_if_not_present "node" "Node.js" "brew install node"
 install_go_tool_if_not_present "gopls" "golang.org/x/tools/gopls@latest"
-install_julia_if_not_present
+if is_macos; then
+    install_julia_if_not_present
+else
+    install_command_if_not_present "crush" "Crush" "brew install charmbracelet/tap/crush"
+fi
 install_command_if_not_present "rbenv" "rbenv" "brew install rbenv"
 install_command_if_not_present "ruby-build" "ruby-build" "brew install ruby-build"
 eval "$(rbenv init - --no-rehash bash)"
@@ -185,9 +213,9 @@ install_gh_extension_if_not_present "dlvhdr/gh-enhance"
 install_command_if_not_present "delta" "delta" "brew install git-delta"
 install_command_if_not_present "tuicr" "tuicr" "brew install tuicr"
 install_command_if_not_present "lazysql" "lazysql" "brew install lazysql"
-install_command_if_not_present "zed" "Zed" "brew install --cask zed"
 install_command_if_not_present "nvim" "Neovim" "brew install neovim"
 install_command_if_not_present "shellcheck" "ShellCheck" "brew install shellcheck"
+install_command_if_not_present "shfmt" "shfmt" "brew install shfmt"
 install_command_if_not_present "bash-language-server" "Bash language server" "brew install bash-language-server"
 install_command_if_not_present "rg" "ripgrep" "brew install ripgrep"
 install_command_if_not_present "tsc" "TypeScript (with native language server)" "brew install typescript"
@@ -232,6 +260,7 @@ link_config "$DOTFILES_DIR/config/zed/keymap.json" "$xdg_config_dir/zed/keymap.j
 link_config "$DOTFILES_DIR/config/zed/tasks.json" "$xdg_config_dir/zed/tasks.json"
 link_config "$DOTFILES_DIR/config/zed/go-to-test.sh" "$xdg_config_dir/zed/go-to-test.sh"
 link_config "$DOTFILES_DIR/config/nvim" "$xdg_config_dir/nvim"
+link_config "$DOTFILES_DIR/config/crush" "$xdg_config_dir/crush"
 link_config "$DOTFILES_DIR/config/gh-dash/config.yml" "$xdg_config_dir/gh-dash/config.yml"
 link_config "$DOTFILES_DIR/config/lazygit/config.yml" "$lazygit_config_dir/config.yml"
 section_end

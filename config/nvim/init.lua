@@ -138,6 +138,8 @@ require("conform").setup({
     jsonc = { "prettier" },
     yaml = { "prettier" },
     ["yaml.helm-values"] = { "prettier" },
+    sh = { "shfmt" },
+    bash = { "shfmt" },
     terraform = { "terraform_fmt" },
     ["terraform-vars"] = { "terraform_fmt" },
   },

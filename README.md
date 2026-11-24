@@ -1,6 +1,6 @@
 # Dotfiles
 
-My personal dotfiles configuration for Bash, Ghostty, Kero, Zed, Neovim, gh-dash, and lazygit.
+My personal dotfiles configuration for Bash, Ghostty, Kero, Zed, Neovim, Crush, gh-dash, and lazygit.
 
 ## Overview
 
@@ -29,6 +29,7 @@ This repository contains my Bash configuration files and scripts to manage them 
 - `config/kero/config` - Kero terminal settings
 - `config/zed/settings.json` - Zed editor settings
 - `config/nvim/` - Neovim settings and pinned plugin versions
+- `config/crush/` - Crush settings (`crushrc`) and custom themes
 - `config/gh-dash/config.yml` - gh-dash diff pager and keybindings for tuicr and ENHANCE
 - `config/lazygit/config.yml` - lazygit diff pager and keybindings for tuicr, PR merge, and New tag
 
@@ -55,28 +56,30 @@ This repository contains my Bash configuration files and scripts to manage them 
 
 The installer also installs the tooling I regularly use from the terminal during my development workflow:
 
-- [JULIA coding harness](https://github.com/mathiashsteffensen/julia-cli), built from source
-- Ghostty and Kero terminals
+- [JULIA coding harness](https://github.com/mathiashsteffensen/julia-cli), built from source on macOS; [Crush](https://github.com/charmbracelet/crush) on Linux
+- Ghostty and Kero terminals (macOS only)
 - Go compiler and `gopls`
 - `rbenv`, `ruby-build`, and the latest stable Ruby
 - Ruby LSP via RubyGems
 - lazygit
 - GitHub CLI (`gh`) with the gh-dash and gh-enhance extensions, delta, and tuicr for pull request review
 - lazysql
-- Zed and Neovim text editors
+- Zed (macOS only) and Neovim text editors
 - Node.js runtime
 - Neovim language servers for JavaScript/TypeScript, Terraform, Dockerfiles, HTML/CSS/JSON, YAML, and Helm
 - Terraform and Helm CLIs, Prettier, and ripgrep
 
-The installer links Ghostty, Kero, Zed, Neovim, and gh-dash settings under `${XDG_CONFIG_HOME:-$HOME/.config}`. It links lazygit settings into the directory that `lazygit --print-config-dir` reports; on macOS that is `~/Library/Application Support/lazygit` unless `XDG_CONFIG_HOME` is set. It installs `rbenv`, `ruby-build`, and the latest stable Ruby known to `ruby-build`, then selects it as rbenv’s global default. Zed is configured to automatically install its Ruby and Terraform extensions; TypeScript and Go support are built in. The installer also installs `gopls`, `ruby-lsp`, RuboCop, and a standalone `terraform-ls` for Neovim. Existing files and directories are backed up as `.bak` (or `.bak.1`, `.bak.2`, etc. when needed) before being replaced with symbolic links.
+The installer links Ghostty, Kero, Zed, Neovim, Crush, and gh-dash settings under `${XDG_CONFIG_HOME:-$HOME/.config}`. It links lazygit settings into the directory that `lazygit --print-config-dir` reports; on macOS that is `~/Library/Application Support/lazygit` unless `XDG_CONFIG_HOME` is set. It installs `rbenv`, `ruby-build`, and the latest stable Ruby known to `ruby-build`, then selects it as rbenv’s global default. Zed is configured to automatically install its Ruby and Terraform extensions; TypeScript and Go support are built in. The installer also installs `gopls`, `ruby-lsp`, RuboCop, and a standalone `terraform-ls` for Neovim. Existing files and directories are backed up as `.bak` (or `.bak.1`, `.bak.2`, etc. when needed) before being replaced with symbolic links.
 
 Kero's configuration enables a Tailscale listener on port 7373. By default, Kero permits connections from the Tailscale user who owns the machine; authorized connections can run programs as the local account.
 
 When `julia` is missing from Go's bin directory, the installer clones julia-cli to `~/code/julia-cli`, or uses the checkout already there, and builds it with `go install ./cmd/julia`. After installation, run `julia doctor` to check the setup.
 
+On Linux (tested on Ubuntu 26.04), the installer uses Homebrew in `/home/linuxbrew/.linuxbrew` and skips the Ghostty, Kero, and Zed casks, which require macOS. It installs Crush instead of JULIA. It starts by installing [Homebrew's Linux requirements](https://docs.brew.sh/Homebrew-on-Linux#requirements) and [ruby-build's suggested Ubuntu packages](https://github.com/rbenv/ruby-build/wiki#ubuntudebianmint) with `apt-get`, which asks for your sudo password, and it builds Ruby against Ubuntu's OpenSSL and libyaml. Crush keeps provider logins, the selected models, and the active theme in its own state directory, `~/.local/share/crush`, so choose those once on each machine.
+
 ### Neovim
 
-Run `nvim .` from a project directory. Zed remains installed and is still the shell/Git default editor. Neovim uses [Ayu Dark](https://github.com/Shatur/neovim-ayu), matching Zed's theme; font and font size come from Ghostty.
+Run `nvim .` from a project directory. Zed is the shell and Git editor when it is installed; otherwise Neovim is. Neovim uses [Ayu Dark](https://github.com/Shatur/neovim-ayu), matching Zed's theme; font and font size come from Ghostty.
 
 Requires Neovim 0.11.3+ and TypeScript 7+ (which includes the native `tsc --lsp` server). The installer adds missing tools but does not upgrade existing ones; use `brew upgrade neovim typescript` if needed. On first launch, [lazy.nvim](https://lazy.folke.io/) downloads the plugins; this needs internet access. Plugin revisions are tracked in `config/nvim/lazy-lock.json`. Use `:Lazy restore` after pulling changes to restore those revisions, or `:Lazy update` to deliberately update them and the lockfile.
 

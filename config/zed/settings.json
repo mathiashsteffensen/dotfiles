@@ -28,6 +28,13 @@
     "Shell Script": {
       "tab_size": 2,
       "hard_tabs": false,
+      "format_on_save": "on",
+      "formatter": {
+        "external": {
+          "command": "shfmt",
+          "arguments": ["--filename", "{buffer_path}", "--indent", "2"],
+        },
+      },
     },
     "Ruby": {
       "language_servers": ["ruby-lsp", "rubocop", "!solargraph", "..."],

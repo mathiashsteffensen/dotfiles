@@ -65,6 +65,10 @@ alias grs="git restore --staged"
 # ------------------------------------------------------------------------------
 #  Standard Command Aliases & Safe Guards
 # ------------------------------------------------------------------------------
+# GNU ls ignores CLICOLOR and LSCOLORS above; only macOS's BSD ls reads them.
+if [[ "$OSTYPE" == linux* ]]; then
+    alias ls='ls --color=auto'
+fi
 alias ll='ls -lah'
 alias la='ls -A'
 alias l='ls -CF'
@@ -76,15 +80,13 @@ alias cp='cp -i'
 # ------------------------------------------------------------------------------
 #  Environment Path Setup
 # ------------------------------------------------------------------------------
-if [[ "$OSTYPE" == darwin* ]]; then
-    for brew_prefix in /opt/homebrew /usr/local; do
-        if [[ -x "$brew_prefix/bin/brew" ]]; then
-            eval "$("$brew_prefix/bin/brew" shellenv)"
-            break
-        fi
-    done
-    unset brew_prefix
-fi
+for brew_prefix in /opt/homebrew /usr/local /home/linuxbrew/.linuxbrew; do
+    if [[ -x "$brew_prefix/bin/brew" ]]; then
+        eval "$("$brew_prefix/bin/brew" shellenv)"
+        break
+    fi
+done
+unset brew_prefix
 if command -v rbenv >/dev/null 2>&1; then
     eval "$(rbenv init - --no-rehash bash)"
 fi
@@ -99,23 +101,30 @@ else
     export PATH="$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH"
 fi
 export PATH="${BUN_INSTALL:-$HOME/.bun}/bin:$PATH"
-export EDITOR="zed --wait"
+if command -v zed >/dev/null 2>&1; then
+    export EDITOR="zed --wait"
+else
+    export EDITOR="nvim"
+fi
 export VISUAL="$EDITOR"
 
-# Start one SSH agent when no usable agent is already present.
 # ssh-add exits 1 for a reachable agent with no identities and 2 when unreachable.
-ssh_agent_status=2
-if [ -n "${SSH_AUTH_SOCK:-}" ] && [ -S "$SSH_AUTH_SOCK" ] && command -v ssh-add >/dev/null 2>&1; then
-    if ssh-add -l >/dev/null 2>&1; then
-        ssh_agent_status=0
-    else
-        ssh_agent_status=$?
+ssh_agent_unreachable() {
+    ssh-add -l >/dev/null 2>&1
+    [ $? -eq 2 ]
+}
+
+# Without a session agent, share one agent at a fixed socket, so new shells do not
+# each start an agent that outlives them.
+if command -v ssh-agent >/dev/null 2>&1 && ssh_agent_unreachable; then
+    [ -d "$HOME/.ssh" ] || mkdir -m 700 "$HOME/.ssh"
+    export SSH_AUTH_SOCK="$HOME/.ssh/agent.sock"
+    if ssh_agent_unreachable; then
+        rm -f "$SSH_AUTH_SOCK"
+        eval "$(ssh-agent -s -a "$SSH_AUTH_SOCK")" >/dev/null
     fi
 fi
-if command -v ssh-agent >/dev/null 2>&1 && [ "$ssh_agent_status" -ne 0 ] && [ "$ssh_agent_status" -ne 1 ]; then
-    eval "$(ssh-agent -s)" >/dev/null
-fi
-unset ssh_agent_status
+unset -f ssh_agent_unreachable
 
 # Load machine-specific shell settings. This file is intentionally not tracked.
 if [ -f ~/.bashrc.local ]; then

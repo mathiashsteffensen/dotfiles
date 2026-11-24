@@ -45,11 +45,11 @@ after() (
 	trap 'exit 143' TERM
 
 	local pattern="$1" next_command="$2"
-	local matches status line pid selected self_pid
+	local pids status pid selected self_pid
 	self_pid=$(exec /bin/bash -c 'printf "%s" "$PPID"')
 	local -a candidates=()
 
-	matches=$(pgrep -fl -- "$pattern") || {
+	pids=$(pgrep -f -- "$pattern") || {
 		status=$?
 		if [[ $status -eq 1 ]]; then
 			printf 'after: no process matches %s\n' "$pattern" >&2
@@ -57,12 +57,12 @@ after() (
 		return "$status"
 	}
 
-	while IFS= read -r line; do
-		pid=${line%% *}
+	while IFS= read -r pid; do
 		# Do not wait for this shell or the subshell running this function.
 		[[ "$pid" == "$$" || "$pid" == "$self_pid" ]] && continue
-		candidates+=("$line")
-	done <<< "$matches"
+		# Linux pgrep -l prints only the process name, so take the command line from ps.
+		candidates+=("$pid $(ps -o args= -p "$pid")")
+	done <<< "$pids"
 
 	if [[ ${#candidates[@]} -eq 0 ]]; then
 		printf 'after: no process matches %s\n' "$pattern" >&2
