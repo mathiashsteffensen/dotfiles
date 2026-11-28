@@ -1,6 +1,6 @@
 # Dotfiles
 
-My personal dotfiles configuration for Bash, Ghostty, Kero, Zed, Neovim, Crush, gh-dash, and lazygit.
+My personal dotfiles configuration for Bash, Ghostty, Kero, Zed, Neovim, gh-dash, and lazygit.
 
 ## Overview
 
@@ -29,7 +29,6 @@ This repository contains my Bash configuration files and scripts to manage them 
 - `config/kero/config` - Kero terminal settings
 - `config/zed/settings.json` - Zed editor settings
 - `config/nvim/` - Neovim settings and pinned plugin versions
-- `config/crush/` - Crush settings (`crushrc`) and custom themes
 - `config/gh-dash/config.yml` - gh-dash diff pager and keybindings for tuicr and ENHANCE
 - `config/lazygit/config.yml` - lazygit diff pager and keybindings for tuicr, PR merge, and New tag
 
@@ -56,7 +55,7 @@ This repository contains my Bash configuration files and scripts to manage them 
 
 The installer also installs the tooling I regularly use from the terminal during my development workflow:
 
-- [JULIA coding harness](https://github.com/mathiashsteffensen/julia-cli), built from source on macOS; [Crush](https://github.com/charmbracelet/crush) on Linux
+- [JULIA coding harness](https://github.com/mathiashsteffensen/julia-cli), updated to the latest commit on each run
 - Ghostty and Kero terminals (macOS only)
 - Go compiler and `gopls`
 - `rbenv`, `ruby-build`, and the latest stable Ruby
@@ -69,15 +68,15 @@ The installer also installs the tooling I regularly use from the terminal during
 - Neovim language servers for JavaScript/TypeScript, Terraform, Dockerfiles, HTML/CSS/JSON, YAML, and Helm
 - Terraform and Helm CLIs, Prettier, and ripgrep
 
-The installer links Ghostty, Kero, Zed, Neovim, Crush, and gh-dash settings under `${XDG_CONFIG_HOME:-$HOME/.config}`. It links lazygit settings into the directory that `lazygit --print-config-dir` reports; on macOS that is `~/Library/Application Support/lazygit` unless `XDG_CONFIG_HOME` is set. It installs `rbenv`, `ruby-build`, and the latest stable Ruby known to `ruby-build`, then selects it as rbenv’s global default. Zed is configured to automatically install its Ruby and Terraform extensions; TypeScript and Go support are built in. The installer also installs `gopls`, `ruby-lsp`, RuboCop, and a standalone `terraform-ls` for Neovim. Existing files and directories are backed up as `.bak` (or `.bak.1`, `.bak.2`, etc. when needed) before being replaced with symbolic links.
+The installer links Ghostty, Kero, Zed, Neovim, and gh-dash settings under `${XDG_CONFIG_HOME:-$HOME/.config}`. It links lazygit settings into the directory that `lazygit --print-config-dir` reports; on macOS that is `~/Library/Application Support/lazygit` unless `XDG_CONFIG_HOME` is set. It installs `rbenv`, `ruby-build`, and the latest stable Ruby known to `ruby-build`, then selects it as rbenv’s global default. Zed is configured to automatically install its Ruby and Terraform extensions; TypeScript and Go support are built in. The installer also installs `gopls`, `ruby-lsp`, RuboCop, and a standalone `terraform-ls` for Neovim. Existing files and directories are backed up as `.bak` (or `.bak.1`, `.bak.2`, etc. when needed) before being replaced with symbolic links.
 
 Kero's configuration enables a Tailscale listener on port 7373. By default, Kero permits connections from the Tailscale user who owns the machine; authorized connections can run programs as the local account.
 
-When `julia` is missing from Go's bin directory, the installer clones julia-cli to `~/code/julia-cli`, or uses the checkout already there, and builds it with `go install ./cmd/julia`. After installation, run `julia doctor` to check the setup.
+On each run, the installer installs or updates JULIA with `go install github.com/mathiashsteffensen/julia-cli/cmd/julia@latest`. Because julia-cli is a private repository, it sets `GOPRIVATE` for that command and fetches the repository over SSH, so your SSH key must have access to it. After installation, run `julia doctor` to check the setup.
 
 JULIA's language servers are in `config/julia/lsp.toml`. Because `~/.config/julia/config.shared.toml` also holds local secrets, the installer does not link it: it copies `lsp.toml` into that file between two marker lines and replaces that block on each run. All JULIA profiles get these servers. Run the installer again after you edit `lsp.toml`. Do not edit the block in `config.shared.toml` directly.
 
-On Linux (tested on Ubuntu 26.04), the installer uses Homebrew in `/home/linuxbrew/.linuxbrew` and skips the Ghostty, Kero, and Zed casks, which require macOS. It installs Crush instead of JULIA. It starts by installing [Homebrew's Linux requirements](https://docs.brew.sh/Homebrew-on-Linux#requirements) and [ruby-build's suggested Ubuntu packages](https://github.com/rbenv/ruby-build/wiki#ubuntudebianmint) with `apt-get`, which asks for your sudo password, and it builds Ruby against Ubuntu's OpenSSL and libyaml. Crush keeps provider logins, the selected models, and the active theme in its own state directory, `~/.local/share/crush`, so choose those once on each machine.
+On Linux (tested on Ubuntu 26.04), the installer uses Homebrew in `/home/linuxbrew/.linuxbrew` and skips the Ghostty, Kero, and Zed casks, which require macOS. It starts by installing [Homebrew's Linux requirements](https://docs.brew.sh/Homebrew-on-Linux#requirements) and [ruby-build's suggested Ubuntu packages](https://github.com/rbenv/ruby-build/wiki#ubuntudebianmint) with `apt-get`, which asks for your sudo password, and it builds Ruby against Ubuntu's OpenSSL and libyaml.
 
 ### Neovim
 

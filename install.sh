@@ -101,33 +101,15 @@ function initialize_homebrew() {
     fi
 }
 
-function go_bin_dir() {
-    local go_bin_dir
-
-    go_bin_dir="$(go env GOBIN)"
-    if [[ -z "$go_bin_dir" ]]; then
-        go_bin_dir="$(go env GOPATH)/bin"
-    fi
-
-    printf '%s\n' "$go_bin_dir"
-}
-
-# JULIA's Go module path is not its repository URL, so `go install <repository>@latest`
-# cannot fetch it. Build it from a checkout instead.
-function install_julia_if_not_present() {
-    local checkout_dir="$HOME/code/julia-cli"
-
-    if [[ -x "$(go_bin_dir)/julia" ]]; then
-        return
-    fi
-
-    title "Installing JULIA..."
-
-    if [[ ! -d "$checkout_dir" ]]; then
-        git clone git@github.com:mathiashsteffensen/julia-cli.git "$checkout_dir"
-    fi
-
-    go install -C "$checkout_dir" ./cmd/julia
+# julia-cli is a private repository, so Go must fetch it from GitHub itself, not through the
+# public module proxy and checksum database. Git fetches it over SSH, so no HTTPS login is needed.
+function install_or_update_julia() {
+    title "Installing or updating JULIA..."
+    GOPRIVATE="github.com/mathiashsteffensen/julia-cli" \
+        GIT_CONFIG_COUNT=1 \
+        GIT_CONFIG_KEY_0="url.ssh://git@github.com/.insteadOf" \
+        GIT_CONFIG_VALUE_0="https://github.com/" \
+        go install github.com/mathiashsteffensen/julia-cli/cmd/julia@latest
 }
 
 function install_ruby_gem_if_not_present() {
@@ -202,11 +184,7 @@ install_command_if_not_present "go" "Go" "brew install go"
 install_command_if_not_present "node" "Node.js" "brew install node"
 # From Homebrew, not `go install`: JULIA's sandbox can run /opt/homebrew/bin but not Go's bin directory.
 install_command_if_not_present "gopls" "gopls" "brew install gopls"
-if is_macos; then
-    install_julia_if_not_present
-else
-    install_command_if_not_present "crush" "Crush" "brew install charmbracelet/tap/crush"
-fi
+install_or_update_julia
 install_command_if_not_present "rbenv" "rbenv" "brew install rbenv"
 install_command_if_not_present "ruby-build" "ruby-build" "brew install ruby-build"
 eval "$(rbenv init - --no-rehash bash)"
@@ -273,7 +251,6 @@ link_config "$DOTFILES_DIR/config/zed/keymap.json" "$xdg_config_dir/zed/keymap.j
 link_config "$DOTFILES_DIR/config/zed/tasks.json" "$xdg_config_dir/zed/tasks.json"
 link_config "$DOTFILES_DIR/config/zed/go-to-test.sh" "$xdg_config_dir/zed/go-to-test.sh"
 link_config "$DOTFILES_DIR/config/nvim" "$xdg_config_dir/nvim"
-link_config "$DOTFILES_DIR/config/crush" "$xdg_config_dir/crush"
 link_config "$DOTFILES_DIR/config/gh-dash/config.yml" "$xdg_config_dir/gh-dash/config.yml"
 link_config "$DOTFILES_DIR/config/lazygit/config.yml" "$lazygit_config_dir/config.yml"
 write_julia_lsp_config "$DOTFILES_DIR/config/julia/lsp.toml" "$xdg_config_dir/julia/config.shared.toml"
