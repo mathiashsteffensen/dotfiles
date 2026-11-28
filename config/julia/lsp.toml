@@ -1,8 +1,26 @@
-# install.sh copies these into ~/.config/julia/config.shared.toml, so every JULIA profile gets them.
+# install.sh copies this into ~/.config/julia/config.shared.toml, so every JULIA profile gets it.
+
+# The Helm patterns match Zed's file_types and Neovim's filetype rules.
+[file_types]
+dockerfile = ["Dockerfile", "Dockerfile.*"]
+helm = ["**/templates/**/*.tpl", "**/templates/**/*.yaml", "**/templates/**/*.yml"]
+jsonc = ["tsconfig*.json", "jsconfig*.json", "**/.vscode/*.json", "**/zed/*.json", "**/.zed/*.json"]
 
 [lsp.gopls]
 command = "gopls"
 filetypes = ["go", "mod"]
+
+# Ruby LSP also reports RuboCop offenses when the project's bundle has RuboCop. With the launcher, a
+# `bundle update` that fails offline does not make it delete the .ruby-lsp bundle your editors share.
+[lsp.ruby_lsp]
+command = "ruby-lsp"
+args = ["--use-launcher"]
+filetypes = ["rb"]
+
+[lsp.tsc]
+command = "tsc"
+args = ["--lsp", "--stdio"]
+filetypes = ["ts", "tsx", "js", "jsx", "mjs", "cjs"]
 
 [lsp.bashls]
 command = "bash-language-server"
@@ -19,6 +37,16 @@ command = "docker-langserver"
 args = ["--stdio"]
 filetypes = ["dockerfile"]
 
+[lsp.html]
+command = "vscode-html-language-server"
+args = ["--stdio"]
+filetypes = ["html"]
+
+[lsp.cssls]
+command = "vscode-css-language-server"
+args = ["--stdio"]
+filetypes = ["css", "scss", "less"]
+
 [lsp.jsonls]
 command = "vscode-json-language-server"
 args = ["--stdio"]
@@ -29,7 +57,9 @@ command = "yaml-language-server"
 args = ["--stdio"]
 filetypes = ["yaml", "yml"]
 
+# helm_ls's own YAML server fetches Kubernetes schemas, which fails offline in JULIA's sandbox.
 [lsp.helm_ls]
 command = "helm_ls"
 args = ["serve"]
-filetypes = ["tpl"]
+filetypes = ["helm"]
+settings = { "helm-ls" = { yamlls = { enabled = false } } }
