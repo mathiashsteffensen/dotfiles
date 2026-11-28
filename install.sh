@@ -104,6 +104,18 @@ function initialize_homebrew() {
 # julia-cli is a private repository, so Go must fetch it from GitHub itself, not through the
 # public module proxy and checksum database. Git fetches it over SSH, so no HTTPS login is needed.
 function install_or_update_julia() {
+    local go_bin_dir
+    local installed
+
+    # A julia outside Go's bin directory belongs to another installer, such as the agent sandbox's
+    # /usr/local/bin/julia. That VM has no GitHub SSH key, and building julia there runs out of memory.
+    go_bin_dir="$(go env GOBIN)"
+    go_bin_dir="${go_bin_dir:-$(go env GOPATH)/bin}"
+    installed="$(command -v julia || true)"
+    if [[ -n "$installed" && "$installed" != "$go_bin_dir/julia" ]]; then
+        return
+    fi
+
     title "Installing or updating JULIA..."
     GOPRIVATE="github.com/mathiashsteffensen/julia-cli" \
         GIT_CONFIG_COUNT=1 \
