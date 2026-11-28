@@ -1,9 +1,9 @@
 command = /bin/bash
 
-background = meadow
+theme = meadow
 window-translucent = true
 window-theme = dark
-dim-unfocused-terminals = true
+dim-unfocused-terminals = false
 font-family = Fira Code
 font-size = 13
 font-weight = 500
@@ -15,3 +15,5 @@ keybind = cmd+shift+f=find.open
 keybind = cmd+right=pane.split.right
 keybind = cmd+down=pane.split.down
 keybind = cmd+f=pane.zoom
+cursor-style = bar
+copy-on-select = true
