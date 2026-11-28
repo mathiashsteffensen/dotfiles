@@ -75,6 +75,8 @@ Kero's configuration enables a Tailscale listener on port 7373. By default, Kero
 
 When `julia` is missing from Go's bin directory, the installer clones julia-cli to `~/code/julia-cli`, or uses the checkout already there, and builds it with `go install ./cmd/julia`. After installation, run `julia doctor` to check the setup.
 
+JULIA's language servers are in `config/julia/lsp.toml`. Because `~/.config/julia/config.shared.toml` also holds local secrets, the installer does not link it: it copies `lsp.toml` into that file between two marker lines and replaces that block on each run. All JULIA profiles get these servers. Run the installer again after you edit `lsp.toml`. Do not edit the block in `config.shared.toml` directly.
+
 On Linux (tested on Ubuntu 26.04), the installer uses Homebrew in `/home/linuxbrew/.linuxbrew` and skips the Ghostty, Kero, and Zed casks, which require macOS. It installs Crush instead of JULIA. It starts by installing [Homebrew's Linux requirements](https://docs.brew.sh/Homebrew-on-Linux#requirements) and [ruby-build's suggested Ubuntu packages](https://github.com/rbenv/ruby-build/wiki#ubuntudebianmint) with `apt-get`, which asks for your sudo password, and it builds Ruby against Ubuntu's OpenSSL and libyaml. Crush keeps provider logins, the selected models, and the active theme in its own state directory, `~/.local/share/crush`, so choose those once on each machine.
 
 ### Neovim

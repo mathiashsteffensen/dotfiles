@@ -51,6 +51,28 @@ function next_available_backup_path() {
     printf '%s\n' "$candidate"
 }
 
+# config.shared.toml holds local secrets and JULIA has no include, so the language
+# servers are copied into it between markers instead of linking the file.
+function write_julia_lsp_config() {
+    local source="$1"
+    local target="$2"
+    local begin_marker="# BEGIN dotfiles language servers (install.sh rewrites this block from config/julia/lsp.toml)"
+    local end_marker="# END dotfiles language servers"
+    local own_settings
+    local language_servers
+
+    touch "$target"
+    own_settings="$(awk -v begin="$begin_marker" -v end="$end_marker" '
+        $0 == begin { in_block = 1 }
+        !in_block { print }
+        $0 == end { in_block = 0 }
+    ' "$target")"
+    language_servers="$(cat "$source")"
+
+    echo "Writing $source into $target"
+    printf '%s\n\n%s\n%s\n%s\n' "$own_settings" "$begin_marker" "$language_servers" "$end_marker" > "$target"
+}
+
 function install_command_if_not_present() {
     local cmd_name="$1"
     local display_name="$2"
@@ -88,16 +110,6 @@ function go_bin_dir() {
     fi
 
     printf '%s\n' "$go_bin_dir"
-}
-
-function install_go_tool_if_not_present() {
-    local cmd_name="$1"
-    local module="$2"
-
-    if [[ ! -x "$(go_bin_dir)/$cmd_name" ]]; then
-        title "Installing $cmd_name..."
-        go install "$module"
-    fi
 }
 
 # JULIA's Go module path is not its repository URL, so `go install <repository>@latest`
@@ -188,7 +200,8 @@ if is_macos; then
 fi
 install_command_if_not_present "go" "Go" "brew install go"
 install_command_if_not_present "node" "Node.js" "brew install node"
-install_go_tool_if_not_present "gopls" "golang.org/x/tools/gopls@latest"
+# From Homebrew, not `go install`: JULIA's sandbox can run /opt/homebrew/bin but not Go's bin directory.
+install_command_if_not_present "gopls" "gopls" "brew install gopls"
 if is_macos; then
     install_julia_if_not_present
 else
@@ -252,7 +265,7 @@ title "Installing application configuration..."
 xdg_config_dir="${XDG_CONFIG_HOME:-$HOME/.config}"
 # On macOS lazygit reads ~/Library/Application Support unless XDG_CONFIG_HOME is set.
 lazygit_config_dir="$(lazygit --print-config-dir)"
-mkdir -p "$xdg_config_dir/ghostty" "$xdg_config_dir/kero" "$xdg_config_dir/zed" "$xdg_config_dir/gh-dash" "$lazygit_config_dir"
+mkdir -p "$xdg_config_dir/ghostty" "$xdg_config_dir/kero" "$xdg_config_dir/zed" "$xdg_config_dir/gh-dash" "$xdg_config_dir/julia" "$lazygit_config_dir"
 link_config "$DOTFILES_DIR/config/ghostty/config" "$xdg_config_dir/ghostty/config"
 link_config "$DOTFILES_DIR/config/kero/config" "$xdg_config_dir/kero/config"
 link_config "$DOTFILES_DIR/config/zed/settings.json" "$xdg_config_dir/zed/settings.json"
@@ -263,6 +276,7 @@ link_config "$DOTFILES_DIR/config/nvim" "$xdg_config_dir/nvim"
 link_config "$DOTFILES_DIR/config/crush" "$xdg_config_dir/crush"
 link_config "$DOTFILES_DIR/config/gh-dash/config.yml" "$xdg_config_dir/gh-dash/config.yml"
 link_config "$DOTFILES_DIR/config/lazygit/config.yml" "$lazygit_config_dir/config.yml"
+write_julia_lsp_config "$DOTFILES_DIR/config/julia/lsp.toml" "$xdg_config_dir/julia/config.shared.toml"
 section_end
 
 title "Done! Your configuration is linked."

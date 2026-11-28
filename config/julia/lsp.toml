@@ -1,0 +1,35 @@
+# install.sh copies these into ~/.config/julia/config.shared.toml, so every JULIA profile gets them.
+
+[lsp.gopls]
+command = "gopls"
+filetypes = ["go", "mod"]
+
+[lsp.bashls]
+command = "bash-language-server"
+args = ["start"]
+filetypes = ["sh", "bash"]
+
+[lsp.terraformls]
+command = "terraform-ls"
+args = ["serve"]
+filetypes = ["tf"]
+
+[lsp.dockerls]
+command = "docker-langserver"
+args = ["--stdio"]
+filetypes = ["dockerfile"]
+
+[lsp.jsonls]
+command = "vscode-json-language-server"
+args = ["--stdio"]
+filetypes = ["json", "jsonc"]
+
+[lsp.yamlls]
+command = "yaml-language-server"
+args = ["--stdio"]
+filetypes = ["yaml", "yml"]
+
+[lsp.helm_ls]
+command = "helm_ls"
+args = ["serve"]
+filetypes = ["tpl"]
